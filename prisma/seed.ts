@@ -23,24 +23,24 @@ async function main() {
   // Categories
   const categories = await Promise.all([
     prisma.category.upsert({
-      where: { slug: 'peptides' },
-      update: {},
-      create: { name: 'Peptides', slug: 'peptides', description: 'Research peptides for recovery and performance' },
+      where: { slug: 'repair-recovery' },
+      update: { name: 'Repair & Recovery' },
+      create: { name: 'Repair & Recovery', slug: 'repair-recovery', description: 'Research compounds studied for tissue repair and recovery' },
     }),
     prisma.category.upsert({
-      where: { slug: 'recovery' },
-      update: {},
-      create: { name: 'Recovery', slug: 'recovery', description: 'Compounds for tissue repair and recovery' },
+      where: { slug: 'body-composition' },
+      update: { name: 'Body Composition' },
+      create: { name: 'Body Composition', slug: 'body-composition', description: 'Research compounds studied for body composition optimization' },
     }),
     prisma.category.upsert({
-      where: { slug: 'performance' },
-      update: {},
-      create: { name: 'Performance', slug: 'performance', description: 'Performance-enhancing research compounds' },
+      where: { slug: 'longevity-aesthetics' },
+      update: { name: 'Longevity & Aesthetics' },
+      create: { name: 'Longevity & Aesthetics', slug: 'longevity-aesthetics', description: 'Research compounds studied for cellular longevity and skin health' },
     }),
     prisma.category.upsert({
-      where: { slug: 'longevity' },
-      update: {},
-      create: { name: 'Longevity', slug: 'longevity', description: 'Anti-aging and cellular health compounds' },
+      where: { slug: 'neuro-mood' },
+      update: { name: 'Neuro & Mood' },
+      create: { name: 'Neuro & Mood', slug: 'neuro-mood', description: 'Research compounds studied for cognitive function and mood regulation' },
     }),
   ])
   console.log('✅ Categories created')
@@ -67,7 +67,7 @@ Each vial contains 5mg of lyophilized BPC-157 peptide. Third-party tested for pu
       featured: true,
       status: 'ACTIVE' as const,
       tags: ['peptide', 'recovery', 'gut', 'tissue', 'bpc157'],
-      categorySlug: 'recovery',
+      categorySlug: 'repair-recovery',
     },
     {
       name: 'TB-500 (5mg)',
@@ -89,7 +89,7 @@ Each vial contains 5mg of lyophilized TB-500 peptide. Third-party tested for pur
       featured: true,
       status: 'ACTIVE' as const,
       tags: ['peptide', 'recovery', 'muscle', 'tb500', 'thymosin'],
-      categorySlug: 'recovery',
+      categorySlug: 'repair-recovery',
     },
     {
       name: 'GHK-Cu (50mg)',
@@ -111,7 +111,7 @@ Each vial contains 50mg of GHK-Cu powder.`,
       featured: false,
       status: 'ACTIVE' as const,
       tags: ['peptide', 'skin', 'longevity', 'ghkcu', 'copper', 'anti-aging'],
-      categorySlug: 'longevity',
+      categorySlug: 'longevity-aesthetics',
     },
     {
       name: 'CJC-1295 No DAC (2mg)',
@@ -132,7 +132,7 @@ Each vial contains 2mg of lyophilized peptide.`,
       featured: true,
       status: 'ACTIVE' as const,
       tags: ['peptide', 'growth-hormone', 'ghrh', 'cjc1295', 'performance'],
-      categorySlug: 'performance',
+      categorySlug: 'body-composition',
     },
     {
       name: 'Ipamorelin (2mg)',
@@ -153,7 +153,7 @@ Often stacked with CJC-1295 for synergistic GH pulse effect.`,
       featured: false,
       status: 'ACTIVE' as const,
       tags: ['peptide', 'growth-hormone', 'ghrelin', 'ipamorelin', 'performance'],
-      categorySlug: 'performance',
+      categorySlug: 'body-composition',
     },
     {
       name: 'Selank (5mg)',
@@ -174,7 +174,7 @@ Each vial contains 5mg of lyophilized Selank peptide.`,
       featured: false,
       status: 'ACTIVE' as const,
       tags: ['peptide', 'nootropic', 'anxiety', 'selank', 'cognitive'],
-      categorySlug: 'peptides',
+      categorySlug: 'neuro-mood',
     },
   ]
 
