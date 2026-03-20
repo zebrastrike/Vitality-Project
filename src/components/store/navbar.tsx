@@ -25,15 +25,15 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 relative">
-              <div className="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
-                <span className="text-brand-400 font-bold text-xs">VP</span>
-              </div>
-            </div>
-            <span className="font-bold text-white tracking-wide hidden sm:block">
-              THE <span className="text-gradient">VITALITY</span> PROJECT
-            </span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/logo.jpg"
+              alt="The Vitality Project"
+              width={160}
+              height={60}
+              className="h-10 w-auto object-contain"
+              priority
+            />
           </Link>
 
           {/* Desktop nav */}
