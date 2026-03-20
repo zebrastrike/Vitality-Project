@@ -99,7 +99,8 @@ model Product {
   description   String        @db.Text
   shortDesc     String?
   price         Int           // in cents
-  comparePrice  Int?          // original price for sale display
+  comparePrice  Int?          // original/strikethrough price
+  salePrice     Int?          // overrides price when set (sale event)
   cost          Int?          // cost of goods
   sku           String?       @unique
   barcode       String?
