@@ -2,18 +2,24 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart, User, Menu, X } from 'lucide-react'
+import { ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
 import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 
-const navLinks = [
-  { href: '/products', label: 'Shop All' },
+const shopCategories = [
+  { href: '/products', label: 'All Products' },
   { href: '/products?category=repair-recovery', label: 'Repair & Recovery' },
   { href: '/products?category=body-composition', label: 'Body Composition' },
   { href: '/products?category=longevity-aesthetics', label: 'Longevity & Aesthetics' },
   { href: '/products?category=neuro-mood', label: 'Neuro & Mood' },
+]
+
+const infoLinks = [
+  { href: '/research', label: 'Research' },
+  { href: '/about', label: 'About' },
+  { href: '/faq', label: 'FAQ' },
 ]
 
 export function Navbar() {
@@ -25,8 +31,9 @@ export function Navbar() {
     <nav className="fixed top-0 w-full z-50 glass border-b border-white/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
+
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center shrink-0">
             <Image
               src="/logo.png"
               alt="The Vitality Project"
@@ -39,7 +46,31 @@ export function Navbar() {
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
+            {/* Shop dropdown */}
+            <div className="relative group">
+              <button className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors py-2">
+                Shop <ChevronDown className="w-3.5 h-3.5 mt-0.5" />
+              </button>
+              <div className="absolute left-0 top-full pt-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150">
+                <div className="glass rounded-xl py-1.5 w-52 shadow-xl">
+                  {shopCategories.map((cat) => (
+                    <Link
+                      key={cat.href}
+                      href={cat.href}
+                      className={`block px-4 py-2 text-sm transition-colors hover:bg-white/5 ${
+                        cat.label === 'All Products'
+                          ? 'text-white font-medium border-b border-white/5 mb-1'
+                          : 'text-white/60 hover:text-white'
+                      }`}
+                    >
+                      {cat.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {infoLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -53,10 +84,7 @@ export function Navbar() {
           {/* Actions */}
           <div className="flex items-center gap-3">
             {/* Cart */}
-            <Link
-              href="/cart"
-              className="relative p-2 text-white/60 hover:text-white transition-colors"
-            >
+            <Link href="/cart" className="relative p-2 text-white/60 hover:text-white transition-colors">
               <ShoppingCart className="w-5 h-5" />
               {itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-brand-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
@@ -72,16 +100,10 @@ export function Navbar() {
                   <User className="w-5 h-5" />
                 </button>
                 <div className="absolute right-0 top-full mt-2 w-48 glass rounded-xl p-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all">
-                  <Link href="/account" className="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg">
-                    My Account
-                  </Link>
-                  <Link href="/account/orders" className="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg">
-                    Orders
-                  </Link>
+                  <Link href="/account" className="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg">My Account</Link>
+                  <Link href="/account/orders" className="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg">Orders</Link>
                   {session.user.role === 'ADMIN' && (
-                    <Link href="/admin" className="block px-3 py-2 text-sm text-brand-400 hover:text-brand-300 hover:bg-white/5 rounded-lg">
-                      Admin Panel
-                    </Link>
+                    <Link href="/admin" className="block px-3 py-2 text-sm text-brand-400 hover:text-brand-300 hover:bg-white/5 rounded-lg">Admin Panel</Link>
                   )}
                   <button
                     onClick={() => signOut()}
@@ -97,7 +119,7 @@ export function Navbar() {
               </Link>
             )}
 
-            {/* Mobile menu toggle */}
+            {/* Mobile toggle */}
             <button
               className="md:hidden p-2 text-white/60 hover:text-white"
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -110,13 +132,25 @@ export function Navbar() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-white/5 px-4 py-4 space-y-2">
-          {navLinks.map((link) => (
+        <div className="md:hidden border-t border-white/5 px-4 py-4 space-y-1">
+          <p className="text-xs font-medium text-white/30 uppercase tracking-wider px-3 pb-1">Shop</p>
+          {shopCategories.map((cat) => (
+            <Link
+              key={cat.href}
+              href={cat.href}
+              onClick={() => setMobileOpen(false)}
+              className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+            >
+              {cat.label}
+            </Link>
+          ))}
+          <div className="border-t border-white/5 pt-2 mt-2" />
+          {infoLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
-              className="block py-2 text-white/70 hover:text-white transition-colors"
+              className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
             >
               {link.label}
             </Link>

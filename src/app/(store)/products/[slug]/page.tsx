@@ -135,6 +135,13 @@ export default async function ProductPage({ params }: Props) {
               </div>
             ))}
           </div>
+
+          {/* RUO Disclaimer */}
+          <div className="rounded-xl border border-white/5 bg-white/2 px-4 py-3">
+            <p className="text-[11px] text-white/30 leading-relaxed">
+              <strong className="text-white/40">For Research Use Only.</strong> Not for human consumption. Not intended to diagnose, treat, cure, or prevent any disease. Not evaluated by the FDA. By purchasing you confirm these are for legitimate research purposes.
+            </p>
+          </div>
         </div>
       </div>
 

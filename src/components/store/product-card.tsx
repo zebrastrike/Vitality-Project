@@ -62,9 +62,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
         {/* Info */}
         <div className="p-4">
-          {product.category && (
-            <p className="text-xs text-brand-400 mb-1 uppercase tracking-wider">{product.category.name}</p>
-          )}
+          <div className="flex items-center justify-between mb-1">
+            {product.category && (
+              <p className="text-xs text-brand-400 uppercase tracking-wider">{product.category.name}</p>
+            )}
+            <span className="text-[10px] text-white/25 font-medium tracking-wide">RUO</span>
+          </div>
           <h3 className="font-semibold text-white mb-2 line-clamp-2">{product.name}</h3>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-baseline gap-2">

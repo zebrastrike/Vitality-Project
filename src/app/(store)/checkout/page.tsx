@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [ruoAgreed, setRuoAgreed] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'wire'>('zelle')
   const [discountCode, setDiscountCode] = useState('')
   const [email, setEmail] = useState(session?.user?.email ?? '')
@@ -166,7 +167,22 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <Button type="submit" size="lg" loading={loading} className="w-full">
+          {/* RUO Acknowledgement */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              required
+              checked={ruoAgreed}
+              onChange={(e) => setRuoAgreed(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded accent-brand-500 shrink-0"
+            />
+            <span className="text-xs text-white/40 leading-relaxed">
+              I confirm these products are for legitimate research purposes only and will not be used for human consumption. I agree to the{' '}
+              <a href="/terms" target="_blank" className="text-brand-400 hover:underline">Terms of Service</a>.
+            </span>
+          </label>
+
+          <Button type="submit" size="lg" loading={loading} disabled={!ruoAgreed} className="w-full">
             <Lock className="w-4 h-4" />
             Place Order
           </Button>
