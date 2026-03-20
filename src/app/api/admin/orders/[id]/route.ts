@@ -12,7 +12,8 @@ const updateSchema = z.object({
   notes: z.string().optional(),
 })
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -23,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // If marking as PAID, also trigger affiliate commission
     if (data.paymentStatus === 'PAID') {
       const order = await prisma.order.findUnique({
-        where: { id: params.id },
+        where: { id: id },
         include: { items: true },
       })
       if (order?.affiliateId) {
@@ -63,20 +64,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    const updated = await prisma.order.update({ where: { id: params.id }, data })
+    const updated = await prisma.order.update({ where: { id: id }, data })
     return NextResponse.json(updated)
   } catch (error) {
     return NextResponse.json({ error: 'Update failed' }, { status: 500 })
   }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       items: { include: { product: { select: { name: true, slug: true } } } },
       user: { select: { name: true, email: true } },

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Navbar } from '@/components/store/navbar'
 import { Footer } from '@/components/store/footer'
 import { AiChat } from '@/components/store/ai-chat'

@@ -1,7 +1,35 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* ── Theme tokens (Tailwind v4 CSS-first config) ───────────────────────── */
+@theme {
+  /* Brand palette — lavender-blue matching logo */
+  --color-brand-50:  #f0f4ff;
+  --color-brand-100: #e0e8ff;
+  --color-brand-200: #c7d5fe;
+  --color-brand-300: #a5b8fc;
+  --color-brand-400: #8193f8;
+  --color-brand-500: #6270f2;
+  --color-brand-600: #4f57e2;
+  --color-brand-700: #3e45c8;
+  --color-brand-800: #343aa3;
+  --color-brand-900: #2e3481;
+  --color-brand-950: #1c1f4d;
+
+  /* Dark backgrounds */
+  --color-dark-900: #0a0a0f;
+  --color-dark-800: #111118;
+  --color-dark-700: #1a1a26;
+  --color-dark-600: #22223a;
+
+  /* Fonts */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-display-family), system-ui, sans-serif;
+}
+
+/* Dark mode via .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Base styles ────────────────────────────────────────────────────────── */
 @layer base {
   :root {
     --font-inter: 'Inter', system-ui, sans-serif;
@@ -30,6 +58,7 @@
   }
 }
 
+/* ── Utility classes ────────────────────────────────────────────────────── */
 @layer utilities {
   .glass {
     @apply bg-white/5 backdrop-blur-md border border-white/10;

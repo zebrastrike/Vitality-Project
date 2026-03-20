@@ -4,9 +4,10 @@ import { formatPrice, formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { OrderActions } from '@/components/admin/order-actions'
 
-export default async function AdminOrderDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       items: { include: { product: { select: { name: true, slug: true, images: { take: 1 } } } } },
       user: { select: { name: true, email: true } },

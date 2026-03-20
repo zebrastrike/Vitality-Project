@@ -8,7 +8,7 @@ import { Shield, Package, Zap } from 'lucide-react'
 import type { Metadata } from 'next'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 async function getProduct(slug: string) {
@@ -29,7 +29,8 @@ async function getProduct(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await getProduct(params.slug)
+  const { slug } = await params
+  const product = await getProduct(slug)
   if (!product) return {}
   return {
     title: product.seoTitle ?? product.name,
@@ -38,7 +39,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params }: Props) {
-  const product = await getProduct(params.slug)
+  const { slug } = await params
+  const product = await getProduct(slug)
   if (!product) notFound()
 
   const mainImage = product.images[0]
