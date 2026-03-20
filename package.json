@@ -25,6 +25,9 @@
   },
   "homepage": "https://github.com/zebrastrike/Vitality-Project#readme",
   "private": "true",
+  "prisma": {
+    "seed": "ts-node --esm prisma/seed.ts"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "~0.80.0",
     "@hookform/resolvers": "~5.2.2",
@@ -62,5 +65,8 @@
     "typescript": "~5.9.3",
     "zod": "~4.3.6",
     "zustand": "~5.0.12"
+  },
+  "devDependencies": {
+    "ts-node": "~10.9.2"
   }
 }
