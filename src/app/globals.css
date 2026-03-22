@@ -1,24 +1,22 @@
 @import "tailwindcss";
 
-/* ── Theme tokens ──────────────────────────────────────────────────────── */
 @theme {
   --color-brand-50:  #f0f4ff;
   --color-brand-100: #e0e8ff;
   --color-brand-200: #c7d5fe;
   --color-brand-300: #a5b8fc;
-  --color-brand-400: #6270f2;
-  --color-brand-500: #4f57e2;
-  --color-brand-600: #3e45c8;
-  --color-brand-700: #343aa3;
-  --color-brand-800: #2e3481;
-  --color-brand-900: #1c1f4d;
-  --color-brand-950: #141238;
+  --color-brand-400: #8193f8;
+  --color-brand-500: #6270f2;
+  --color-brand-600: #4f57e2;
+  --color-brand-700: #3e45c8;
+  --color-brand-800: #343aa3;
+  --color-brand-900: #2e3481;
+  --color-brand-950: #1c1f4d;
 
-  /* Light surface tones */
-  --color-dark-900: #f2f2f7;
-  --color-dark-800: #e5e5ea;
-  --color-dark-700: #d1d1d6;
-  --color-dark-600: #c7c7cc;
+  --color-dark-900: #0c0e1a;
+  --color-dark-800: #121428;
+  --color-dark-700: #1a1d36;
+  --color-dark-600: #242845;
 
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-display: var(--font-display-family), system-ui, sans-serif;
@@ -26,7 +24,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Base ──────────────────────────────────────────────────────────────── */
 @layer base {
   :root {
     --font-inter: 'Inter', system-ui, sans-serif;
@@ -36,29 +33,27 @@
   html { scroll-behavior: smooth; }
 
   body {
-    @apply antialiased;
-    color: #1c1c1e;
-    background: #f2f2f7;
+    @apply text-white antialiased;
+    background: #0c0e1a;
     overflow-x: hidden;
     min-height: 100vh;
   }
 
-  /* ── Soft luminous wash — light, warm, alive ──────────────────────── */
+  /* Color pools for the glass to refract */
   body::before {
     content: '';
     position: fixed;
-    inset: 0;
+    inset: -10%;
     z-index: -2;
     background:
-      /* Soft lavender wash — top */
-      radial-gradient(ellipse 90% 50% at 50% 0%, rgba(98, 112, 242, 0.10), transparent 65%),
-      /* Warm peach glow — bottom right */
-      radial-gradient(ellipse 60% 50% at 85% 90%, rgba(255, 180, 130, 0.08), transparent 55%),
-      /* Cool blue — left edge */
-      radial-gradient(ellipse 40% 60% at 5% 50%, rgba(130, 170, 255, 0.06), transparent 50%);
+      radial-gradient(circle 800px at 20% 15%, rgba(88, 60, 200, 0.35), transparent),
+      radial-gradient(circle 600px at 75% 20%, rgba(40, 80, 180, 0.25), transparent),
+      radial-gradient(circle 700px at 60% 75%, rgba(60, 40, 160, 0.30), transparent),
+      radial-gradient(circle 500px at 10% 80%, rgba(30, 70, 140, 0.20), transparent),
+      radial-gradient(circle 400px at 90% 60%, rgba(100, 60, 180, 0.15), transparent);
+    filter: blur(60px);
   }
 
-  /* Fine grain texture */
   body::after {
     content: '';
     position: fixed;
@@ -73,64 +68,136 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.10);
+    background: rgba(255, 255, 255, 0.10);
     border-radius: 999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.20);
   }
 }
 
-/* ── Glass — light background, frosted white panels ───────────────────── */
+/*
+ * ── LIQUID GLASS ──────────────────────────────────────────────────────
+ *
+ * Apple's liquid glass is:
+ *  - Transparent (you see through it, not frosted)
+ *  - Glossy (specular highlight across the surface)
+ *  - Refractive (colors bend and shift underneath)
+ *  - Has a visible THICKNESS (shadow + inner glow)
+ *  - Tinted by what's behind it (not white/opaque)
+ *
+ * NOT frosted. NOT matte. NOT opaque white.
+ */
 @layer utilities {
 
-  /* Standard glass panel — frosted white on light bg */
   .glass {
-    backdrop-filter: blur(40px) saturate(1.6);
-    -webkit-backdrop-filter: blur(40px) saturate(1.6);
-    background: rgba(255, 255, 255, 0.55);
-    border: 0.5px solid rgba(255, 255, 255, 0.70);
-    border-radius: 16px;
+    position: relative;
+    backdrop-filter: blur(16px) saturate(1.8) brightness(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.8) brightness(1.1);
+    background: linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.02) 45%,
+      rgba(255, 255, 255, 0.06) 100%
+    );
+    border: 1px solid;
+    border-image: linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.35) 0%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.20) 100%
+    ) 1;
+    border-radius: 24px;
+    /* border-image doesn't work with border-radius, so we use outline trick */
+    border: none;
+    outline: 1px solid rgba(255, 255, 255, 0.12);
+    outline-offset: -1px;
     box-shadow:
-      0 4px 24px rgba(0, 0, 0, 0.06),
-      0 1px 4px rgba(0, 0, 0, 0.04),
-      inset 0 0.5px 0 rgba(255, 255, 255, 0.90);
+      /* outer depth — the glass feels thick */
+      0 8px 40px rgba(0, 0, 0, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.20),
+      /* specular highlight — glossy top edge */
+      inset 0 1px 0 rgba(255, 255, 255, 0.30),
+      /* secondary specular — bottom catch */
+      inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+      /* glass refraction glow — the liquid part */
+      inset 0 0 30px rgba(255, 255, 255, 0.03);
   }
 
-  /* Elevated glass — navbar, dropdowns */
+  /* Glossy sheen pseudo-element — this is what makes it LIQUID */
+  .glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      transparent 40%,
+      transparent 60%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
   .glass-elevated {
-    backdrop-filter: blur(60px) saturate(1.8);
-    -webkit-backdrop-filter: blur(60px) saturate(1.8);
-    background: rgba(255, 255, 255, 0.65);
-    border: 0.5px solid rgba(255, 255, 255, 0.80);
+    position: relative;
+    backdrop-filter: blur(24px) saturate(2.0) brightness(1.15);
+    -webkit-backdrop-filter: blur(24px) saturate(2.0) brightness(1.15);
+    background: linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0.03) 45%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+    border: none;
+    outline: 1px solid rgba(255, 255, 255, 0.15);
+    outline-offset: -1px;
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.08),
-      0 1px 4px rgba(0, 0, 0, 0.04),
-      inset 0 0.5px 0 rgba(255, 255, 255, 0.95);
+      0 12px 48px rgba(0, 0, 0, 0.40),
+      0 4px 12px rgba(0, 0, 0, 0.25),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.40),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 0 40px rgba(255, 255, 255, 0.04);
   }
 
-  /* Subtle glass — pills, small elements */
+  .glass-elevated::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      165deg,
+      rgba(255, 255, 255, 0.20) 0%,
+      transparent 35%,
+      transparent 65%,
+      rgba(255, 255, 255, 0.06) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
   .glass-subtle {
-    backdrop-filter: blur(20px) saturate(1.3);
-    -webkit-backdrop-filter: blur(20px) saturate(1.3);
-    background: rgba(255, 255, 255, 0.35);
-    border: 0.5px solid rgba(255, 255, 255, 0.50);
+    backdrop-filter: blur(12px) saturate(1.5);
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
+    background: rgba(255, 255, 255, 0.06);
+    outline: 1px solid rgba(255, 255, 255, 0.10);
+    outline-offset: -1px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-brand-400 to-brand-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-brand-300 to-brand-500 bg-clip-text text-transparent;
   }
 
   .card-hover {
-    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .card-hover:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.65);
-    border-color: rgba(255, 255, 255, 0.85);
+    transform: translateY(-4px);
     box-shadow:
-      0 12px 40px rgba(0, 0, 0, 0.08),
-      0 2px 8px rgba(0, 0, 0, 0.04),
-      inset 0 0.5px 0 rgba(255, 255, 255, 0.95);
+      0 20px 60px rgba(0, 0, 0, 0.40),
+      0 4px 16px rgba(0, 0, 0, 0.25),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+      inset 0 0 40px rgba(255, 255, 255, 0.05),
+      0 0 40px rgba(98, 112, 242, 0.06);
   }
 }

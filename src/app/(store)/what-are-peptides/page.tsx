@@ -57,10 +57,10 @@ function FaqCard({ q, a }: { q: string; a: string }) {
     <details className="glass rounded-2xl group">
       <summary className="p-6 cursor-pointer flex items-center justify-between gap-4 list-none [&::-webkit-details-marker]:hidden">
         <h3 className="font-semibold">{q}</h3>
-        <ChevronDown className="w-5 h-5 text-gray-900/40 shrink-0 transition-transform group-open:rotate-180" />
+        <ChevronDown className="w-5 h-5 text-white/40 shrink-0 transition-transform group-open:rotate-180" />
       </summary>
       <div className="px-6 pb-6 -mt-2">
-        <p className="text-gray-900/60 text-sm leading-relaxed">{a}</p>
+        <p className="text-white/60 text-sm leading-relaxed">{a}</p>
       </div>
     </details>
   )
@@ -80,7 +80,7 @@ export default function WhatArePeptidesPage() {
           Peptide Science
         </p>
         <h1 className="text-4xl font-bold mb-4">The Biological Blueprint of Peptides</h1>
-        <p className="text-gray-900/50 text-lg leading-relaxed">
+        <p className="text-white/50 text-lg leading-relaxed">
           A Science-Based Foundation for Modern Research, Signaling, and Precision Biology
         </p>
       </div>
@@ -89,7 +89,7 @@ export default function WhatArePeptidesPage() {
       <div className="glass rounded-xl p-5 mb-10 border border-brand-500/20">
         <div className="flex gap-3">
           <FlaskConical className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-900/50 leading-relaxed">
+          <p className="text-sm text-white/50 leading-relaxed">
             The information on this page is provided for educational and research purposes only. It
             does not constitute medical advice and is not intended to diagnose, treat, cure, or
             prevent any disease. All products referenced are sold for research use only.
@@ -102,7 +102,7 @@ export default function WhatArePeptidesPage() {
         <p className="text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">
           Definition
         </p>
-        <p className="text-gray-900/80 text-lg leading-relaxed">
+        <p className="text-white/80 text-lg leading-relaxed">
           Peptides are short chains of amino acids that function as biological signaling molecules,
           regulating processes such as metabolism, cellular repair, hormone activity, and immune
           response by binding to specific receptors in the body.
@@ -113,7 +113,7 @@ export default function WhatArePeptidesPage() {
       <div className="space-y-8">
         <div className="glass rounded-2xl p-8">
           <h2 className="text-xl font-bold mb-3">The Biological Blueprint</h2>
-          <p className="text-gray-900/60 leading-relaxed">
+          <p className="text-white/60 leading-relaxed">
             Every biological process in the body — from wound healing to sleep regulation — is
             governed by molecular instructions. Peptides are a critical layer of that instruction
             system. They do not force change the way many synthetic compounds do; instead, they
@@ -128,14 +128,14 @@ export default function WhatArePeptidesPage() {
 
         <div className="glass rounded-2xl p-8">
           <h2 className="text-xl font-bold mb-3">From Amino Acids to Biological Signals</h2>
-          <p className="text-gray-900/60 leading-relaxed mb-4">
+          <p className="text-white/60 leading-relaxed mb-4">
             All peptides are composed of amino acids — the 20 standard building blocks used across
             all forms of life. Each amino acid has a unique side chain that determines its chemical
             properties: some are hydrophobic, others polar, acidic, or basic. When amino acids are
             linked together in a specific order through peptide bonds, the resulting chain folds and
             interacts with its environment in ways dictated entirely by that sequence.
           </p>
-          <p className="text-gray-900/60 leading-relaxed">
+          <p className="text-white/60 leading-relaxed">
             A change of even a single amino acid in a peptide sequence can radically alter its
             function — redirecting it to a different receptor, changing its binding affinity, or
             modifying its half-life in biological systems. This is why sequence specificity is the
@@ -146,14 +146,14 @@ export default function WhatArePeptidesPage() {
 
         <div className="glass rounded-2xl p-8">
           <h2 className="text-xl font-bold mb-3">Natural Origin: The Language of Life</h2>
-          <p className="text-gray-900/60 leading-relaxed mb-4">
+          <p className="text-white/60 leading-relaxed mb-4">
             Peptides are not a recent invention. They are one of the oldest and most conserved
             signaling systems in biology. The human body produces hundreds of endogenous peptides —
             from insulin and oxytocin to antimicrobial defensins and neuropeptide Y. These molecules
             regulate hunger, mood, healing, immune defense, and cellular turnover every second of
             every day.
           </p>
-          <p className="text-gray-900/60 leading-relaxed">
+          <p className="text-white/60 leading-relaxed">
             Beyond human biology, peptides are found across all kingdoms of life. Plants produce
             peptide hormones that regulate growth and defense. Marine organisms such as cone snails
             produce venom peptides with extraordinary receptor specificity, several of which have
@@ -165,7 +165,7 @@ export default function WhatArePeptidesPage() {
 
         <div className="glass rounded-2xl p-8">
           <h2 className="text-xl font-bold mb-3">From Nature to Laboratory Synthesis</h2>
-          <p className="text-gray-900/60 leading-relaxed mb-4">
+          <p className="text-white/60 leading-relaxed mb-4">
             Modern research peptides are manufactured using Solid-Phase Peptide Synthesis (SPPS), a
             method developed by Nobel laureate Bruce Merrifield in 1963. SPPS builds the peptide
             chain one amino acid at a time on a solid resin support, allowing precise control of
@@ -173,7 +173,7 @@ export default function WhatArePeptidesPage() {
             purified using high-performance liquid chromatography (HPLC), and verified through mass
             spectrometry.
           </p>
-          <p className="text-gray-900/60 leading-relaxed">
+          <p className="text-white/60 leading-relaxed">
             This process enables the production of peptide sequences identical to those found in
             nature — as well as novel analogues designed to improve stability, receptor affinity, or
             bioavailability. Research-grade peptides typically meet or exceed 98% purity standards,
@@ -183,13 +183,13 @@ export default function WhatArePeptidesPage() {
 
         <div className="glass rounded-2xl p-8">
           <h2 className="text-xl font-bold mb-3">Structure Determines Function</h2>
-          <p className="text-gray-900/60 leading-relaxed mb-4">
+          <p className="text-white/60 leading-relaxed mb-4">
             A peptide&apos;s primary structure — its linear amino acid sequence — is the foundation
             of its biological activity. But function is not determined by sequence alone. Many
             peptides adopt secondary structures such as alpha-helices, beta-turns, or random coils
             that are critical for receptor recognition and binding.
           </p>
-          <p className="text-gray-900/60 leading-relaxed">
+          <p className="text-white/60 leading-relaxed">
             When a peptide encounters its target receptor, it fits into the binding pocket with
             geometric precision — a relationship often described as &quot;lock and key&quot; or, more
             accurately, &quot;induced fit.&quot; This binding event triggers a conformational change
@@ -205,7 +205,7 @@ export default function WhatArePeptidesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
             <div>
               <p className="text-brand-400 text-sm font-semibold mb-2">Peptides</p>
-              <ul className="text-gray-900/60 text-sm leading-relaxed space-y-1.5">
+              <ul className="text-white/60 text-sm leading-relaxed space-y-1.5">
                 <li>• 2–50 amino acids in length</li>
                 <li>• Typically act as signaling molecules</li>
                 <li>• Compact and receptor-specific</li>
@@ -215,7 +215,7 @@ export default function WhatArePeptidesPage() {
             </div>
             <div>
               <p className="text-brand-400 text-sm font-semibold mb-2">Proteins</p>
-              <ul className="text-gray-900/60 text-sm leading-relaxed space-y-1.5">
+              <ul className="text-white/60 text-sm leading-relaxed space-y-1.5">
                 <li>• 50+ amino acids, often hundreds</li>
                 <li>• Structural, enzymatic, and transport roles</li>
                 <li>• Complex 3D folding required for function</li>
@@ -228,7 +228,7 @@ export default function WhatArePeptidesPage() {
 
         <div className="glass rounded-2xl p-8">
           <h2 className="text-xl font-bold mb-3">Why This Matters</h2>
-          <p className="text-gray-900/60 leading-relaxed">
+          <p className="text-white/60 leading-relaxed">
             The shift toward peptide-based research represents a broader movement in biology: from
             blunt interventions to precision signaling. Rather than flooding a system with a broad
             compound and managing side effects, peptide research explores how targeted molecular
@@ -255,7 +255,7 @@ export default function WhatArePeptidesPage() {
       {/* FAQ Section */}
       <div className="mt-16">
         <h2 className="text-2xl font-bold mb-2">Frequently Asked Questions</h2>
-        <p className="text-gray-900/50 text-sm mb-8">
+        <p className="text-white/50 text-sm mb-8">
           Common questions about peptides, their function, legality, and research applications.
         </p>
         <div className="space-y-3">

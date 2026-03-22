@@ -36,14 +36,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-dark-900">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center mx-auto mb-4">
             <Lock className="w-6 h-6 text-brand-400" />
           </div>
           <h1 className="text-2xl font-bold">Sign In</h1>
-          <p className="text-gray-900/40 mt-1">Welcome back to The Vitality Project</p>
+          <p className="text-white/40 mt-1">Welcome back to The Vitality Project</p>
         </div>
 
         <div className="glass rounded-2xl p-8">
@@ -70,7 +70,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-gray-900/40 mt-6">
+          <p className="text-center text-sm text-white/40 mt-6">
             Don&apos;t have an account?{' '}
             <Link href="/auth/register" className="text-brand-400 hover:text-brand-300">
               Create one

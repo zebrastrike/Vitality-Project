@@ -10,14 +10,14 @@ export default function TermsPage() {
       <div className="mb-10">
         <p className="text-brand-400 text-sm font-medium uppercase tracking-widest mb-3">Legal</p>
         <h1 className="text-4xl font-bold">Terms of Service</h1>
-        <p className="text-gray-900/30 text-sm mt-3">Last updated: March 2026</p>
+        <p className="text-white/30 text-sm mt-3">Last updated: March 2026</p>
       </div>
 
-      <div className="space-y-6 text-gray-900/60 text-sm leading-relaxed">
+      <div className="space-y-6 text-white/60 text-sm leading-relaxed">
         <div className="glass rounded-2xl p-6 border border-brand-500/20">
-          <h2 className="font-semibold text-gray-900 mb-2">Research Use Only — Critical Notice</h2>
+          <h2 className="font-semibold text-white mb-2">Research Use Only — Critical Notice</h2>
           <p>
-            All products sold by The Vitality Project are intended exclusively for in vitro laboratory research and scientific study by qualified professionals. They are <strong className="text-gray-900/80">not</strong> intended for human consumption, veterinary use, diagnostic purposes, or therapeutic application of any kind. These products have not been evaluated by the Food and Drug Administration and are not approved to diagnose, treat, cure, or prevent any disease or condition.
+            All products sold by The Vitality Project are intended exclusively for in vitro laboratory research and scientific study by qualified professionals. They are <strong className="text-white/80">not</strong> intended for human consumption, veterinary use, diagnostic purposes, or therapeutic application of any kind. These products have not been evaluated by the Food and Drug Administration and are not approved to diagnose, treat, cure, or prevent any disease or condition.
           </p>
           <p className="mt-3">
             By completing a purchase on this site, you represent and warrant that: (1) you are a qualified researcher, scientist, or licensed professional using these compounds for legitimate research purposes; (2) you are at least 18 years of age; and (3) your use of these products complies with all applicable federal, state, and local laws.
@@ -63,7 +63,7 @@ export default function TermsPage() {
           },
         ].map((item) => (
           <div key={item.title} className="glass rounded-2xl p-6">
-            <h2 className="font-semibold text-gray-900 mb-2">{item.title}</h2>
+            <h2 className="font-semibold text-white mb-2">{item.title}</h2>
             <p>{item.body}</p>
           </div>
         ))}

@@ -58,7 +58,7 @@ export default function PeptidesSafetyPage() {
           Quality Assurance
         </p>
         <h1 className="text-4xl font-bold mb-4">Peptide Safety &amp; Quality Standards</h1>
-        <p className="text-gray-900/50 text-lg leading-relaxed">
+        <p className="text-white/50 text-lg leading-relaxed">
           How research-grade peptides are tested, manufactured, and stored — and what quality
           markers serious researchers should look for.
         </p>
@@ -68,7 +68,7 @@ export default function PeptidesSafetyPage() {
       <div className="glass rounded-xl p-5 mb-10 border border-brand-500/20">
         <div className="flex gap-3">
           <FlaskConical className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-900/50 leading-relaxed">
+          <p className="text-sm text-white/50 leading-relaxed">
             All products sold by The Vitality Project are for research use only. They are not
             intended for human consumption and have not been evaluated by the FDA. The information
             below describes quality standards applied to research-grade compounds.
@@ -86,7 +86,7 @@ export default function PeptidesSafetyPage() {
               </div>
               <h2 className="text-xl font-bold">{section.title}</h2>
             </div>
-            <p className="text-gray-900/60 leading-relaxed">{section.body}</p>
+            <p className="text-white/60 leading-relaxed">{section.body}</p>
           </div>
         ))}
       </div>

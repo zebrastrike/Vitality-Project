@@ -45,7 +45,7 @@ export default function AffiliatePage() {
           Earn With{' '}
           <span className="text-gradient">Vitality</span>
         </h1>
-        <p className="text-gray-900/50 max-w-lg mx-auto text-lg">
+        <p className="text-white/50 max-w-lg mx-auto text-lg">
           Share our products, earn 10% commission on every sale. Server-side tracking means every referral is counted.
         </p>
       </div>
@@ -56,7 +56,7 @@ export default function AffiliatePage() {
           <div key={p.title} className="glass rounded-2xl p-5 card-hover">
             <p.icon className="w-8 h-8 text-brand-400 mb-3" />
             <h3 className="font-semibold mb-1">{p.title}</h3>
-            <p className="text-sm text-gray-900/40">{p.desc}</p>
+            <p className="text-sm text-white/40">{p.desc}</p>
           </div>
         ))}
       </div>
@@ -68,7 +68,7 @@ export default function AffiliatePage() {
             <div className="text-center">
               <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-4" />
               <h2 className="text-xl font-bold mb-2">Application Submitted!</h2>
-              <p className="text-gray-900/50">We&apos;ll review your application and get back to you within 24 hours.</p>
+              <p className="text-white/50">We&apos;ll review your application and get back to you within 24 hours.</p>
             </div>
           ) : session ? (
             <>
@@ -89,7 +89,7 @@ export default function AffiliatePage() {
           ) : (
             <>
               <h2 className="text-xl font-bold mb-3">Ready to Join?</h2>
-              <p className="text-gray-900/50 mb-6">Create an account to apply to our affiliate program.</p>
+              <p className="text-white/50 mb-6">Create an account to apply to our affiliate program.</p>
               <div className="flex gap-3">
                 <Link href="/auth/register" className="flex-1">
                   <Button className="w-full">Create Account</Button>

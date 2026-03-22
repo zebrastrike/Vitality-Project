@@ -72,7 +72,7 @@ export default function SyntheticVsNaturalPeptidesPage() {
           Peptide Science
         </p>
         <h1 className="text-4xl font-bold mb-4">Synthetic vs Natural Peptides</h1>
-        <p className="text-gray-900/50 text-lg leading-relaxed">
+        <p className="text-white/50 text-lg leading-relaxed">
           How synthetic research peptides compare to their endogenous counterparts — and why
           laboratory synthesis is the standard for reproducible research.
         </p>
@@ -82,7 +82,7 @@ export default function SyntheticVsNaturalPeptidesPage() {
       <div className="glass rounded-xl p-5 mb-10 border border-brand-500/20">
         <div className="flex gap-3">
           <FlaskConical className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-900/50 leading-relaxed">
+          <p className="text-sm text-white/50 leading-relaxed">
             The information on this page is provided for educational and research purposes only. It
             does not constitute medical advice and is not intended to diagnose, treat, cure, or
             prevent any disease. All products referenced are sold for research use only.
@@ -95,7 +95,7 @@ export default function SyntheticVsNaturalPeptidesPage() {
         <p className="text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">
           Key Distinction
         </p>
-        <p className="text-gray-900/80 text-lg leading-relaxed">
+        <p className="text-white/80 text-lg leading-relaxed">
           Synthetic peptides are not novel compounds — they are precision-manufactured replicas of
           naturally occurring biological sequences. The distinction between &ldquo;synthetic&rdquo;
           and &ldquo;natural&rdquo; is one of production method, not molecular identity.
@@ -107,40 +107,40 @@ export default function SyntheticVsNaturalPeptidesPage() {
         <h2 className="text-xl font-bold mb-6">At a Glance</h2>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-300/40">
-              <th className="text-left py-3 pr-4 text-gray-900/40 font-medium">Parameter</th>
-              <th className="text-left py-3 px-4 text-gray-900/40 font-medium">Natural Peptides</th>
-              <th className="text-left py-3 pl-4 text-gray-900/40 font-medium">Synthetic Peptides</th>
+            <tr className="border-b border-white/12">
+              <th className="text-left py-3 pr-4 text-white/40 font-medium">Parameter</th>
+              <th className="text-left py-3 px-4 text-white/40 font-medium">Natural Peptides</th>
+              <th className="text-left py-3 pl-4 text-white/40 font-medium">Synthetic Peptides</th>
             </tr>
           </thead>
-          <tbody className="text-gray-900/60">
-            <tr className="border-b border-gray-300/30">
-              <td className="py-3 pr-4 font-medium text-gray-900/80">Source</td>
+          <tbody className="text-white/60">
+            <tr className="border-b border-white/10">
+              <td className="py-3 pr-4 font-medium text-white/80">Source</td>
               <td className="py-3 px-4">Endogenous production, enzymatic cleavage</td>
               <td className="py-3 pl-4">SPPS manufacturing</td>
             </tr>
-            <tr className="border-b border-gray-300/30">
-              <td className="py-3 pr-4 font-medium text-gray-900/80">Purity</td>
+            <tr className="border-b border-white/10">
+              <td className="py-3 pr-4 font-medium text-white/80">Purity</td>
               <td className="py-3 px-4">Variable, co-purification challenges</td>
               <td className="py-3 pl-4">Typically 98%+ with HPLC verification</td>
             </tr>
-            <tr className="border-b border-gray-300/30">
-              <td className="py-3 pr-4 font-medium text-gray-900/80">Consistency</td>
+            <tr className="border-b border-white/10">
+              <td className="py-3 pr-4 font-medium text-white/80">Consistency</td>
               <td className="py-3 px-4">Subject to biological variability</td>
               <td className="py-3 pl-4">Batch-to-batch identical</td>
             </tr>
-            <tr className="border-b border-gray-300/30">
-              <td className="py-3 pr-4 font-medium text-gray-900/80">Scalability</td>
+            <tr className="border-b border-white/10">
+              <td className="py-3 pr-4 font-medium text-white/80">Scalability</td>
               <td className="py-3 px-4">Limited by biological source</td>
               <td className="py-3 pl-4">On-demand production at any scale</td>
             </tr>
-            <tr className="border-b border-gray-300/30">
-              <td className="py-3 pr-4 font-medium text-gray-900/80">Half-life</td>
+            <tr className="border-b border-white/10">
+              <td className="py-3 pr-4 font-medium text-white/80">Half-life</td>
               <td className="py-3 px-4">Short (minutes), rapid degradation</td>
               <td className="py-3 pl-4">Can be engineered for stability</td>
             </tr>
             <tr>
-              <td className="py-3 pr-4 font-medium text-gray-900/80">Documentation</td>
+              <td className="py-3 pr-4 font-medium text-white/80">Documentation</td>
               <td className="py-3 px-4">Characterization varies</td>
               <td className="py-3 pl-4">CoA with MS and HPLC data</td>
             </tr>
@@ -160,7 +160,7 @@ export default function SyntheticVsNaturalPeptidesPage() {
               </div>
               <div className="space-y-4">
                 {section.content.map((paragraph, i) => (
-                  <p key={i} className="text-gray-900/60 leading-relaxed">
+                  <p key={i} className="text-white/60 leading-relaxed">
                     {paragraph}
                   </p>
                 ))}

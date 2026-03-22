@@ -35,7 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
     <Link href={`/products/${product.slug}`}>
       <div className="group glass rounded-2xl overflow-hidden card-hover cursor-pointer">
         {/* Image */}
-        <div className="relative aspect-square bg-gray-100">
+        <div className="relative aspect-square bg-dark-800">
           {image ? (
             <Image
               src={image.url}
@@ -44,7 +44,7 @@ export function ProductCard({ product }: ProductCardProps) {
               className="object-cover group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-900/10">
+            <div className="w-full h-full flex items-center justify-center text-white/10">
               <span className="text-4xl font-bold">VP</span>
             </div>
           )}
@@ -54,8 +54,8 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
           {product.inventory === 0 && (
-            <div className="absolute inset-0 bg-gray-100/80 flex items-center justify-center">
-              <span className="text-gray-900/60 text-sm font-medium">Out of Stock</span>
+            <div className="absolute inset-0 bg-dark-900/80 flex items-center justify-center">
+              <span className="text-white/60 text-sm font-medium">Out of Stock</span>
             </div>
           )}
         </div>
@@ -66,14 +66,14 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.category && (
               <p className="text-xs text-brand-400 uppercase tracking-wider">{product.category.name}</p>
             )}
-            <span className="text-[10px] text-gray-900/25 font-medium tracking-wide">RUO</span>
+            <span className="text-[10px] text-white/25 font-medium tracking-wide">RUO</span>
           </div>
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+          <h3 className="font-semibold text-white mb-2 line-clamp-2">{product.name}</h3>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-baseline gap-2">
-              <span className="font-bold text-gray-900">{formatPrice(product.price)}</span>
+              <span className="font-bold text-white">{formatPrice(product.price)}</span>
               {product.comparePrice && (
-                <span className="text-sm text-gray-900/40 line-through">{formatPrice(product.comparePrice)}</span>
+                <span className="text-sm text-white/40 line-through">{formatPrice(product.comparePrice)}</span>
               )}
             </div>
             <Button

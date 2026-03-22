@@ -1,14 +1,13 @@
 /**
- * Generates lifestyle images for the site — healthy, active people.
- * Sells the vision without a single word.
+ * Generates lifestyle images — professional, gender-neutral, aspirational.
+ * Sells vitality without saying a word.
  *
- * Usage:
- *   npx tsx scripts/generate-lifestyle-images.ts
- *
+ * Usage: npx tsx scripts/generate-lifestyle-images.ts
  * Requires OPENAI_API_KEY in .env.local
  */
 
-import 'dotenv/config'
+import dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })
 import OpenAI from 'openai'
 import fs from 'fs'
 import path from 'path'
@@ -20,44 +19,46 @@ const OUT_DIR = path.resolve(__dirname, '../public/images/lifestyle')
 
 const scenes = [
   {
-    name: 'hero-woman-sunrise',
-    prompt: `Editorial fitness photography. A fit woman in her 30s finishing a morning trail run at golden hour sunrise. She's pausing on a scenic overlook, catching her breath with a confident, serene expression. Athletic wear, natural lighting, no logos. Shot on medium format, shallow depth of field, warm golden tones. She radiates health, strength, and calm. Premium brand aesthetic, clean and aspirational.`,
+    name: 'hero-athlete-sunrise',
+    prompt: `High-end editorial fitness photography. A fit man in his mid-30s standing at the top of a hill at golden hour sunrise, looking out over the landscape. He's just finished a hard run — sweat visible, relaxed posture, quiet confidence. Dark athletic gear, no logos, no text. Shot on medium format camera, 85mm, f/2.8. Warm golden light, cinematic color grading. Premium wellness brand aesthetic. Clean, aspirational, powerful.`,
   },
   {
-    name: 'hero-man-gym',
-    prompt: `Editorial fitness photography. An athletic man in his mid-30s in a clean, modern gym doing a controlled deadlift with perfect form. Natural expression of focused effort. Minimal background, moody dramatic lighting with soft shadows. No logos or text on clothing. Shot on 85mm f/1.4, cinematic color grading. He looks strong, disciplined, healthy. Premium luxury fitness aesthetic.`,
+    name: 'hero-strength',
+    prompt: `Editorial fitness photography. Close-up of a person's hands chalking up before a heavy lift in a clean, industrial gym. Dramatic side lighting, shallow depth of field. You can see the bar and plates in soft focus behind. Raw, tactile, powerful. No face visible — just the ritual of preparation. Dark, moody, minimal. Shot on 35mm f/1.4. Premium performance brand aesthetic.`,
   },
   {
-    name: 'woman-yoga-outdoor',
-    prompt: `Lifestyle photography. A woman in her early 30s doing yoga on an outdoor deck overlooking greenery at sunrise. Warrior II pose, natural light, peaceful expression. Wearing simple black athletic wear, no logos. Soft bokeh background, warm earth tones. She embodies balance, flexibility, and wellness. Clean editorial style, magazine quality.`,
+    name: 'recovery-routine',
+    prompt: `Premium lifestyle photography. A clean, minimal kitchen counter in soft morning light. A glass of water, two small pharmaceutical-style glass vials, and a rolled white towel arranged naturally — not styled, just lived-in. Bright, airy, modern apartment. No person visible. Warm neutral tones — white marble, light wood, stainless steel. Shot overhead at slight angle, 50mm. The image says discipline and routine without a single word. Medical-adjacent, premium, clean.`,
   },
   {
-    name: 'couple-hiking',
-    prompt: `Lifestyle adventure photography. A fit couple in their 30s hiking together on a coastal trail, laughing naturally. Both in tasteful outdoor athletic wear, no logos. Ocean and cliffs in the background, golden afternoon light. Shot wide on 35mm, natural color palette. They radiate vitality, energy, and connection. Premium outdoor lifestyle brand aesthetic.`,
+    name: 'outdoor-performance',
+    prompt: `Editorial adventure photography. A fit person doing outdoor calisthenics on parallel bars at a coastal park, ocean in the background. Mid-action, muscles engaged, powerful form. Gender-neutral framing — shot from behind/side, athletic build visible. Late afternoon golden light. Simple dark athletic shorts, no shirt or simple tank, no logos. Wide shot on 24mm, environmental portrait. Premium outdoor fitness brand. Strong, disciplined, natural.`,
   },
   {
-    name: 'woman-recovery-stretch',
-    prompt: `Intimate wellness photography. A woman in her 30s doing a deep post-workout stretch on a yoga mat in a bright, minimal home studio. Soft natural window light, clean white and warm wood tones. Her expression is calm and content. Simple sports bra and leggings, no logos. Shot at eye level, shallow depth of field. Recovery, self-care, intentional living aesthetic.`,
+    name: 'lab-quality',
+    prompt: `Product/still life photography. Several small clear glass pharmaceutical vials with black rubber stoppers arranged on a clean white surface with soft directional window light. One vial is in sharp focus in foreground, others in soft bokeh behind. The glass catches light beautifully. Minimal, clinical, premium. Shot on macro lens, shallow depth of field. No labels, no text. The image communicates pharmaceutical-grade quality and precision. Medical aesthetic, clean, trustworthy.`,
   },
   {
-    name: 'man-supplement-morning',
-    prompt: `Lifestyle photography. A healthy, athletic man in his early 30s at a clean modern kitchen counter in morning light. He's preparing his morning routine — a few small glass vials and a glass of water on the counter. Natural, candid pose, looking out the window with a calm, focused expression. Bright, airy, minimal. No text or logos. Premium wellness brand aesthetic.`,
+    name: 'focus-discipline',
+    prompt: `Editorial portrait photography. A person in their early 30s with sharp, clear eyes looking directly at camera. Close crop — face and shoulders only. Incredible skin clarity and health visible. Neutral expression, quietly confident. Soft studio lighting, clean neutral gray background. No makeup look, natural. Gender-neutral styling — simple dark crew neck. Shot on 85mm f/1.8. The eyes communicate focus, discipline, and vitality. Premium, editorial, powerful.`,
   },
   {
-    name: 'woman-confidence-portrait',
-    prompt: `Portrait photography. A beautiful, fit woman in her early 30s with clear, glowing skin. Head and shoulders, looking directly at camera with a subtle confident smile. Soft studio lighting, dark neutral background. Minimal makeup, natural beauty. Her skin and eyes radiate health. Shot on 85mm, f/2, editorial portrait style. Aspirational, powerful, elegant.`,
+    name: 'active-lifestyle',
+    prompt: `Editorial fitness photography. A person doing battle ropes in a modern gym. Mid-swing action shot — ropes creating dramatic wave pattern. Dramatic rim lighting from behind, dark background. Sweat and intensity visible. Athletic build, gender-neutral framing. No logos, no text on clothing. Fast shutter freeze, sharp and dynamic. Shot on 70-200mm f/2.8. Raw power and energy. Premium performance brand aesthetic.`,
   },
   {
-    name: 'active-lifestyle-collage',
-    prompt: `Editorial fitness photography. A fit person doing battle ropes in an upscale gym with dramatic lighting. Mid-action shot capturing intensity and movement. Dark moody background, single light source creating rim lighting on the body. Sweat visible, raw energy and power. No logos, no text. Shot on fast shutter, sharp and dynamic. Premium performance brand aesthetic.`,
+    name: 'wellness-morning',
+    prompt: `Lifestyle photography. A person standing at a floor-to-ceiling window in a modern high-rise apartment, looking out at a city skyline at dawn. Shot from behind, silhouette with soft morning light wrapping around their frame. Athletic build visible in simple dark t-shirt and joggers. A glass of water and small vial on the windowsill beside them. The image communicates intentionality, calm before the day, and personal optimization. Cinematic, aspirational, premium. Shot on 35mm, wide angle.`,
   },
 ]
 
 async function generate() {
   if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true })
 
+  console.log(`\nGenerating ${scenes.length} lifestyle images...\n`)
+
   for (const scene of scenes) {
-    console.log(`\n  Generating: ${scene.name}...`)
+    console.log(`  ${scene.name}...`)
 
     try {
       const response = await openai.images.generate({
@@ -84,17 +85,16 @@ async function generate() {
 
       const outPath = path.join(OUT_DIR, `${scene.name}.png`)
       fs.writeFileSync(outPath, imgBuffer)
-      console.log(`  Saved → public/images/lifestyle/${scene.name}.png`)
+      console.log(`    saved -> public/images/lifestyle/${scene.name}.png`)
 
-      // Rate limit — ~8s between requests to stay within tier limits
       await new Promise((r) => setTimeout(r, 8000))
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.error(`  Failed: ${scene.name} — ${msg}`)
+      console.error(`    FAILED: ${msg}`)
     }
   }
 
-  console.log('\n  Done! All lifestyle images generated.')
+  console.log('\nDone.')
 }
 
 generate()

@@ -30,7 +30,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <nav className="fixed top-0 w-full z-50 glass-elevated border-b border-gray-300/30">
+    <nav className="fixed top-0 w-full z-50 glass-elevated border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
 
@@ -50,7 +50,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-6">
             {/* Shop dropdown */}
             <div className="relative group">
-              <button className="flex items-center gap-1 text-sm text-gray-900/60 hover:text-gray-900 transition-colors py-2">
+              <button className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors py-2">
                 Shop <ChevronDown className="w-3.5 h-3.5 mt-0.5" />
               </button>
               <div className="absolute left-0 top-full pt-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150">
@@ -59,10 +59,10 @@ export function Navbar() {
                     <Link
                       key={cat.href}
                       href={cat.href}
-                      className={`block px-4 py-2 text-sm transition-colors hover:bg-gray-900/5 ${
+                      className={`block px-4 py-2 text-sm transition-colors hover:bg-white/5 ${
                         cat.label === 'All Products'
-                          ? 'text-gray-900 font-medium border-b border-gray-300/30 mb-1'
-                          : 'text-gray-900/60 hover:text-gray-900'
+                          ? 'text-white font-medium border-b border-white/10 mb-1'
+                          : 'text-white/60 hover:text-white'
                       }`}
                     >
                       {cat.label}
@@ -74,7 +74,7 @@ export function Navbar() {
 
             {/* Learn dropdown */}
             <div className="relative group">
-              <button className="flex items-center gap-1 text-sm text-gray-900/60 hover:text-gray-900 transition-colors py-2">
+              <button className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors py-2">
                 Learn <ChevronDown className="w-3.5 h-3.5 mt-0.5" />
               </button>
               <div className="absolute left-0 top-full pt-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150">
@@ -83,7 +83,7 @@ export function Navbar() {
                     <Link
                       key={link.href}
                       href={link.href}
-                      className="block px-4 py-2 text-sm text-gray-900/60 hover:text-gray-900 transition-colors hover:bg-gray-900/5"
+                      className="block px-4 py-2 text-sm text-white/60 hover:text-white transition-colors hover:bg-white/5"
                     >
                       {link.label}
                     </Link>
@@ -94,14 +94,14 @@ export function Navbar() {
 
             <Link
               href="/blog"
-              className="text-sm text-gray-900/60 hover:text-gray-900 transition-colors"
+              className="text-sm text-white/60 hover:text-white transition-colors"
             >
               Blog
             </Link>
 
             <Link
               href="/about"
-              className="text-sm text-gray-900/60 hover:text-gray-900 transition-colors"
+              className="text-sm text-white/60 hover:text-white transition-colors"
             >
               About
             </Link>
@@ -110,7 +110,7 @@ export function Navbar() {
           {/* Actions */}
           <div className="flex items-center gap-3">
             {/* Cart */}
-            <Link href="/cart" className="relative p-2 text-gray-900/60 hover:text-gray-900 transition-colors">
+            <Link href="/cart" className="relative p-2 text-white/60 hover:text-white transition-colors">
               <ShoppingCart className="w-5 h-5" />
               {itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-brand-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
@@ -122,18 +122,18 @@ export function Navbar() {
             {/* Account */}
             {session ? (
               <div className="relative group">
-                <button className="flex items-center gap-2 p-2 text-gray-900/60 hover:text-gray-900 transition-colors">
+                <button className="flex items-center gap-2 p-2 text-white/60 hover:text-white transition-colors">
                   <User className="w-5 h-5" />
                 </button>
                 <div className="absolute right-0 top-full mt-2 w-48 glass rounded-xl p-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all">
-                  <Link href="/account" className="block px-3 py-2 text-sm text-gray-900/70 hover:text-gray-900 hover:bg-gray-900/5 rounded-lg">My Account</Link>
-                  <Link href="/account/orders" className="block px-3 py-2 text-sm text-gray-900/70 hover:text-gray-900 hover:bg-gray-900/5 rounded-lg">Orders</Link>
+                  <Link href="/account" className="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg">My Account</Link>
+                  <Link href="/account/orders" className="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg">Orders</Link>
                   {session.user.role === 'ADMIN' && (
-                    <Link href="/admin" className="block px-3 py-2 text-sm text-brand-400 hover:text-brand-300 hover:bg-gray-900/5 rounded-lg">Admin Panel</Link>
+                    <Link href="/admin" className="block px-3 py-2 text-sm text-brand-400 hover:text-brand-300 hover:bg-white/5 rounded-lg">Admin Panel</Link>
                   )}
                   <button
                     onClick={() => signOut()}
-                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-gray-900/5 rounded-lg"
+                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-white/5 rounded-lg"
                   >
                     Sign Out
                   </button>
@@ -147,7 +147,7 @@ export function Navbar() {
 
             {/* Mobile toggle */}
             <button
-              className="md:hidden p-2 text-gray-900/60 hover:text-gray-900"
+              className="md:hidden p-2 text-white/60 hover:text-white"
               onClick={() => setMobileOpen(!mobileOpen)}
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -158,42 +158,42 @@ export function Navbar() {
 
       {/* Mobile nav */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-gray-300/30 px-4 py-4 space-y-1">
-          <p className="text-xs font-medium text-gray-900/30 uppercase tracking-wider px-3 pb-1">Shop</p>
+        <div className="md:hidden border-t border-white/10 px-4 py-4 space-y-1">
+          <p className="text-xs font-medium text-white/30 uppercase tracking-wider px-3 pb-1">Shop</p>
           {shopCategories.map((cat) => (
             <Link
               key={cat.href}
               href={cat.href}
               onClick={() => setMobileOpen(false)}
-              className="block px-3 py-2 text-gray-900/70 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-900/5"
+              className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
             >
               {cat.label}
             </Link>
           ))}
-          <div className="border-t border-gray-300/30 pt-2 mt-2" />
-          <p className="text-xs font-medium text-gray-900/30 uppercase tracking-wider px-3 pb-1">Learn</p>
+          <div className="border-t border-white/10 pt-2 mt-2" />
+          <p className="text-xs font-medium text-white/30 uppercase tracking-wider px-3 pb-1">Learn</p>
           {learnLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
-              className="block px-3 py-2 text-gray-900/70 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-900/5"
+              className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
             >
               {link.label}
             </Link>
           ))}
-          <div className="border-t border-gray-300/30 pt-2 mt-2" />
+          <div className="border-t border-white/10 pt-2 mt-2" />
           <Link
             href="/blog"
             onClick={() => setMobileOpen(false)}
-            className="block px-3 py-2 text-gray-900/70 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-900/5"
+            className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
           >
             Blog
           </Link>
           <Link
             href="/about"
             onClick={() => setMobileOpen(false)}
-            className="block px-3 py-2 text-gray-900/70 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-900/5"
+            className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
           >
             About
           </Link>

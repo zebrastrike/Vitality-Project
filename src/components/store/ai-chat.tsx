@@ -52,16 +52,16 @@ export function AiChat() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-6 w-80 sm:w-96 z-50 flex flex-col glass rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-gray-300/40" style={{ maxHeight: '520px' }}>
-          <div className="flex items-center gap-3 p-4 border-b border-gray-300/30 bg-gray-100/50 shrink-0">
+        <div className="fixed bottom-24 right-6 w-80 sm:w-96 z-50 flex flex-col glass rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-white/12" style={{ maxHeight: '520px' }}>
+          <div className="flex items-center gap-3 p-4 border-b border-white/10 bg-white/5 shrink-0">
             <div className="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
               <Bot className="w-4 h-4 text-brand-400" />
             </div>
             <div>
               <p className="font-semibold text-sm">Vita AI</p>
-              <p className="text-xs text-gray-900/40">Powered by Claude</p>
+              <p className="text-xs text-white/40">Powered by Claude</p>
             </div>
-            <button onClick={() => setOpen(false)} className="ml-auto text-gray-900/40 hover:text-gray-900 transition-colors">
+            <button onClick={() => setOpen(false)} className="ml-auto text-white/40 hover:text-white transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -76,7 +76,7 @@ export function AiChat() {
                 )}
                 <div className={cn(
                   'max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed',
-                  msg.role === 'user' ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-gray-200 text-gray-900/80 rounded-tl-sm'
+                  msg.role === 'user' ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-dark-700 text-white/80 rounded-tl-sm'
                 )}>
                   {msg.content}
                 </div>
@@ -87,15 +87,15 @@ export function AiChat() {
                 <div className="w-6 h-6 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0">
                   <Bot className="w-3 h-3 text-brand-400" />
                 </div>
-                <div className="bg-gray-200 px-3 py-2 rounded-2xl rounded-tl-sm">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-900/40" />
+                <div className="bg-dark-700 px-3 py-2 rounded-2xl rounded-tl-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-white/40" />
                 </div>
               </div>
             )}
             <div ref={bottomRef} />
           </div>
 
-          <div className="p-3 border-t border-gray-300/30 shrink-0">
+          <div className="p-3 border-t border-white/10 shrink-0">
             <div className="flex gap-2">
               <textarea
                 value={input}
@@ -103,7 +103,7 @@ export function AiChat() {
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
                 placeholder="Ask about our products..."
                 rows={1}
-                className="flex-1 px-3 py-2 rounded-xl bg-gray-200 border border-gray-300/40 text-sm text-gray-900 placeholder:text-gray-900/30 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                className="flex-1 px-3 py-2 rounded-xl bg-dark-700 border border-white/12 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
               />
               <button
                 onClick={sendMessage}

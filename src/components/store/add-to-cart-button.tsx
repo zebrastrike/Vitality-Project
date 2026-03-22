@@ -56,7 +56,7 @@ export function AddToCartButton({ product }: Props) {
       {/* Variant selector */}
       {product.variants.length > 1 && (
         <div>
-          <label className="text-sm font-medium text-gray-900/70 mb-2 block">Select Option</label>
+          <label className="text-sm font-medium text-white/70 mb-2 block">Select Option</label>
           <div className="flex flex-wrap gap-2">
             {product.variants.map((v) => (
               <button
@@ -66,7 +66,7 @@ export function AddToCartButton({ product }: Props) {
                 className={`px-4 py-2 rounded-xl text-sm border transition-all ${
                   selectedVariant?.id === v.id
                     ? 'border-brand-500 bg-brand-500/20 text-brand-400'
-                    : 'border-gray-300/40 text-gray-900/60 hover:border-white/30 disabled:opacity-30 disabled:cursor-not-allowed'
+                    : 'border-white/12 text-white/60 hover:border-white/30 disabled:opacity-30 disabled:cursor-not-allowed'
                 }`}
               >
                 {v.name}
@@ -78,18 +78,18 @@ export function AddToCartButton({ product }: Props) {
 
       {/* Quantity */}
       <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-gray-900/70">Qty</label>
+        <label className="text-sm font-medium text-white/70">Qty</label>
         <div className="flex items-center gap-2 glass rounded-xl p-1">
           <button
             onClick={() => setQuantity(Math.max(1, quantity - 1))}
-            className="w-8 h-8 flex items-center justify-center text-gray-900/60 hover:text-gray-900"
+            className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white"
           >
             −
           </button>
           <span className="w-8 text-center text-sm font-medium">{quantity}</span>
           <button
             onClick={() => setQuantity(quantity + 1)}
-            className="w-8 h-8 flex items-center justify-center text-gray-900/60 hover:text-gray-900"
+            className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white"
           >
             +
           </button>

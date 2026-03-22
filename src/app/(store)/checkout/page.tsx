@@ -120,18 +120,18 @@ export default function CheckoutPage() {
                   className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${
                     paymentMethod === opt.key
                       ? 'border-brand-500 bg-brand-500/10'
-                      : 'border-gray-300/40 hover:border-gray-300/50'
+                      : 'border-white/12 hover:border-white/15'
                   }`}
                 >
                   <opt.icon className="w-6 h-6 text-brand-400" />
                   <div>
                     <p className="text-sm font-medium">{opt.label}</p>
-                    <p className="text-xs text-gray-900/40">{opt.desc}</p>
+                    <p className="text-xs text-white/40">{opt.desc}</p>
                   </div>
                 </button>
               ))}
             </div>
-            <div className="glass rounded-xl p-4 text-sm text-gray-900/50">
+            <div className="glass rounded-xl p-4 text-sm text-white/50">
               {paymentMethod === 'zelle'
                 ? 'After placing your order, you\'ll receive Zelle payment details. Include your order number in the memo.'
                 : 'After placing your order, wire transfer details will be emailed to you. Use your order number as the reference.'}
@@ -145,7 +145,7 @@ export default function CheckoutPage() {
           <div className="space-y-3 mb-4">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-gray-900/60 truncate mr-2">{item.name} × {item.quantity}</span>
+                <span className="text-white/60 truncate mr-2">{item.name} × {item.quantity}</span>
                 <span className="shrink-0">{formatPrice(item.price * item.quantity)}</span>
               </div>
             ))}
@@ -155,12 +155,12 @@ export default function CheckoutPage() {
             <input type="text" placeholder="Discount code"
               value={discountCode}
               onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-              className="flex-1 px-3 py-2 rounded-xl bg-gray-200 border border-gray-300/40 text-sm text-gray-900 placeholder:text-gray-900/30 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="flex-1 px-3 py-2 rounded-xl bg-dark-700 border border-white/12 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
             <Button type="button" variant="secondary" size="sm">Apply</Button>
           </div>
 
-          <div className="border-t border-gray-300/40 pt-4 mb-6">
+          <div className="border-t border-white/12 pt-4 mb-6">
             <div className="flex justify-between font-bold text-lg">
               <span>Total</span>
               <span>{formatPrice(total)}</span>
@@ -176,7 +176,7 @@ export default function CheckoutPage() {
               onChange={(e) => setRuoAgreed(e.target.checked)}
               className="mt-0.5 w-4 h-4 rounded accent-brand-500 shrink-0"
             />
-            <span className="text-xs text-gray-900/40 leading-relaxed">
+            <span className="text-xs text-white/40 leading-relaxed">
               I confirm these products are for legitimate research purposes only and will not be used for human consumption. I agree to the{' '}
               <a href="/terms" target="_blank" className="text-brand-400 hover:underline">Terms of Service</a>.
             </span>
@@ -186,7 +186,7 @@ export default function CheckoutPage() {
             <Lock className="w-4 h-4" />
             Place Order
           </Button>
-          <p className="text-xs text-gray-900/30 text-center mt-3">
+          <p className="text-xs text-white/30 text-center mt-3">
             Payment instructions provided after order confirmation.
           </p>
         </div>

@@ -45,7 +45,7 @@ export default function PeptidesBenefitsPage() {
           Research Areas
         </p>
         <h1 className="text-4xl font-bold mb-4">Research Applications of Peptides</h1>
-        <p className="text-gray-900/50 text-lg leading-relaxed">
+        <p className="text-white/50 text-lg leading-relaxed">
           An overview of the major research domains where peptides are actively studied in
           preclinical and in vitro settings. All content below reflects published scientific
           literature and is presented for educational purposes only.
@@ -56,7 +56,7 @@ export default function PeptidesBenefitsPage() {
       <div className="glass rounded-xl p-5 mb-10 border border-brand-500/20">
         <div className="flex gap-3">
           <FlaskConical className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-900/50 leading-relaxed">
+          <p className="text-sm text-white/50 leading-relaxed">
             The research applications described below are based on preclinical and in vitro studies
             published in peer-reviewed journals. Nothing on this page constitutes a medical claim or
             recommendation. All products sold by The Vitality Project are for research use only.
@@ -74,7 +74,7 @@ export default function PeptidesBenefitsPage() {
               </div>
               <h2 className="text-xl font-bold">{area.title}</h2>
             </div>
-            <p className="text-gray-900/60 leading-relaxed">{area.body}</p>
+            <p className="text-white/60 leading-relaxed">{area.body}</p>
           </div>
         ))}
       </div>
