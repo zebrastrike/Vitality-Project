@@ -36,14 +36,16 @@ export function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <Image
-              src="/logo.png"
-              alt="The Vitality Project"
-              width={360}
-              height={135}
-              className="h-21 w-auto object-contain"
-              priority
-            />
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-1.5">
+              <Image
+                src="/logo.jpg"
+                alt="The Vitality Project"
+                width={480}
+                height={180}
+                className="h-28 w-auto object-contain rounded-lg"
+                priority
+              />
+            </div>
           </Link>
 
           {/* Desktop nav */}
