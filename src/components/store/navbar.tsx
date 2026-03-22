@@ -16,10 +16,12 @@ const shopCategories = [
   { href: '/products?category=neuro-mood', label: 'Neuro & Mood' },
 ]
 
-const infoLinks = [
-  { href: '/research', label: 'Research' },
-  { href: '/about', label: 'About' },
-  { href: '/faq', label: 'FAQ' },
+const learnLinks = [
+  { href: '/what-are-peptides', label: 'The Biological Blueprint' },
+  { href: '/how-peptides-work', label: 'How Peptides Work' },
+  { href: '/peptides-benefits', label: 'Research Applications' },
+  { href: '/peptides-safety', label: 'Safety & Quality' },
+  { href: '/peptides-legality', label: 'Legality' },
 ]
 
 export function Navbar() {
@@ -70,15 +72,39 @@ export function Navbar() {
               </div>
             </div>
 
-            {infoLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm text-white/60 hover:text-white transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {/* Learn dropdown */}
+            <div className="relative group">
+              <button className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors py-2">
+                Learn <ChevronDown className="w-3.5 h-3.5 mt-0.5" />
+              </button>
+              <div className="absolute left-0 top-full pt-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-150">
+                <div className="glass rounded-xl py-1.5 w-56 shadow-xl">
+                  {learnLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="block px-4 py-2 text-sm text-white/60 hover:text-white transition-colors hover:bg-white/5"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/blog"
+              className="text-sm text-white/60 hover:text-white transition-colors"
+            >
+              Blog
+            </Link>
+
+            <Link
+              href="/about"
+              className="text-sm text-white/60 hover:text-white transition-colors"
+            >
+              About
+            </Link>
           </div>
 
           {/* Actions */}
@@ -145,7 +171,8 @@ export function Navbar() {
             </Link>
           ))}
           <div className="border-t border-white/5 pt-2 mt-2" />
-          {infoLinks.map((link) => (
+          <p className="text-xs font-medium text-white/30 uppercase tracking-wider px-3 pb-1">Learn</p>
+          {learnLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -155,6 +182,21 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          <div className="border-t border-white/5 pt-2 mt-2" />
+          <Link
+            href="/blog"
+            onClick={() => setMobileOpen(false)}
+            className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+          >
+            Blog
+          </Link>
+          <Link
+            href="/about"
+            onClick={() => setMobileOpen(false)}
+            className="block px-3 py-2 text-white/70 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+          >
+            About
+          </Link>
         </div>
       )}
     </nav>

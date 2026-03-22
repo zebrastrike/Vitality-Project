@@ -6,7 +6,7 @@ export function Footer() {
     <footer className="border-t border-white/5 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="md:col-span-2">
+          <div>
             <Image src="/logo.png" alt="The Vitality Project" width={180} height={68} className="h-12 w-auto object-contain mb-3" />
             <p className="text-white/40 text-sm max-w-xs">
               Premium quality research compounds sourced and fulfilled with complete data privacy.
@@ -20,6 +20,15 @@ export function Footer() {
               <li><Link href="/products?category=body-composition" className="hover:text-white transition-colors">Body Composition</Link></li>
               <li><Link href="/products?category=longevity-aesthetics" className="hover:text-white transition-colors">Longevity & Aesthetics</Link></li>
               <li><Link href="/products?category=neuro-mood" className="hover:text-white transition-colors">Neuro & Mood</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold text-white/80 mb-3 text-sm">Learn</h4>
+            <ul className="space-y-2 text-sm text-white/40">
+              <li><Link href="/what-are-peptides" className="hover:text-white transition-colors">What Are Peptides</Link></li>
+              <li><Link href="/how-peptides-work" className="hover:text-white transition-colors">How They Work</Link></li>
+              <li><Link href="/peptides-safety" className="hover:text-white transition-colors">Safety & Quality</Link></li>
+              <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
             </ul>
           </div>
           <div>
