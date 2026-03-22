@@ -50,11 +50,6 @@ export default async function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 w-full">
           {/* Hero content ON a glass panel */}
           <div className="glass p-10 sm:p-14 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-subtle text-sm text-brand-300 mb-6">
-              <span className="w-2 h-2 bg-brand-400 rounded-full animate-pulse" />
-              Research-Grade Compounds
-            </div>
-
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 tracking-tight">
               Elevate Your{' '}
               <span className="text-gradient">Vitality</span>
