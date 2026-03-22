@@ -82,7 +82,7 @@ export default function PeptideSignalingExplainedPage() {
           Cellular Mechanisms
         </p>
         <h1 className="text-4xl font-bold mb-4">Peptide Signaling Explained</h1>
-        <p className="text-white/50 text-lg leading-relaxed">
+        <p className="text-gray-900/50 text-lg leading-relaxed">
           How peptide signals are transmitted, received, and processed at the cellular level —
           from receptor binding to intracellular cascades.
         </p>
@@ -92,7 +92,7 @@ export default function PeptideSignalingExplainedPage() {
       <div className="glass rounded-xl p-5 mb-10 border border-brand-500/20">
         <div className="flex gap-3">
           <FlaskConical className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-white/50 leading-relaxed">
+          <p className="text-sm text-gray-900/50 leading-relaxed">
             The information on this page is provided for educational and research purposes only. It
             does not constitute medical advice and is not intended to diagnose, treat, cure, or
             prevent any disease. All products referenced are sold for research use only.
@@ -105,7 +105,7 @@ export default function PeptideSignalingExplainedPage() {
         <p className="text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">
           Overview
         </p>
-        <p className="text-white/80 text-lg leading-relaxed">
+        <p className="text-gray-900/80 text-lg leading-relaxed">
           Peptide signaling is the process by which short-chain amino acid sequences bind to
           specific membrane receptors and trigger intracellular events that regulate gene expression,
           metabolism, growth, repair, and homeostasis. It is one of the most conserved and precisely
@@ -125,7 +125,7 @@ export default function PeptideSignalingExplainedPage() {
               </div>
               <div className="space-y-4">
                 {section.content.map((paragraph, i) => (
-                  <p key={i} className="text-white/60 leading-relaxed">
+                  <p key={i} className="text-gray-900/60 leading-relaxed">
                     {paragraph}
                   </p>
                 ))}
@@ -139,7 +139,7 @@ export default function PeptideSignalingExplainedPage() {
           <p className="text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">
             Core Principle
           </p>
-          <p className="text-white/90 text-lg leading-relaxed font-medium">
+          <p className="text-gray-900/90 text-lg leading-relaxed font-medium">
             Peptide signaling is not pharmacological intervention — it is biological communication.
             Research peptides allow investigators to study these native signaling systems with
             molecular precision.

@@ -17,8 +17,8 @@ export default function ConfirmationPage({ searchParams }: Props) {
       </div>
 
       <h1 className="text-3xl font-bold mb-2">Order Placed!</h1>
-      <p className="text-white/50 mb-2">Your order has been received.</p>
-      <div className="inline-block bg-dark-700 rounded-xl px-5 py-2 font-mono font-bold text-brand-400 text-lg mb-10">
+      <p className="text-gray-900/50 mb-2">Your order has been received.</p>
+      <div className="inline-block bg-gray-200 rounded-xl px-5 py-2 font-mono font-bold text-brand-400 text-lg mb-10">
         {orderNumber}
       </div>
 
@@ -36,19 +36,19 @@ export default function ConfirmationPage({ searchParams }: Props) {
         </div>
 
         {method === 'zelle' ? (
-          <div className="space-y-4 text-white/70">
+          <div className="space-y-4 text-gray-900/70">
             <p>Please send your payment via Zelle to complete your order:</p>
             <div className="glass rounded-xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Amount</span>
-                <span className="font-bold text-white">See order total in confirmation email</span>
+                <span className="text-gray-900/50">Amount</span>
+                <span className="font-bold text-gray-900">See order total in confirmation email</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Zelle</span>
-                <span className="font-bold text-white">Payment details in your confirmation email</span>
+                <span className="text-gray-900/50">Zelle</span>
+                <span className="font-bold text-gray-900">Payment details in your confirmation email</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Memo / Note</span>
+                <span className="text-gray-900/50">Memo / Note</span>
                 <span className="font-bold text-brand-400 font-mono">{orderNumber}</span>
               </div>
             </div>
@@ -57,22 +57,22 @@ export default function ConfirmationPage({ searchParams }: Props) {
             </p>
           </div>
         ) : (
-          <div className="space-y-4 text-white/70">
+          <div className="space-y-4 text-gray-900/70">
             <p>Wire transfer details have been sent to your email address.</p>
             <div className="glass rounded-xl p-4">
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Reference Number</span>
+                <span className="text-gray-900/50">Reference Number</span>
                 <span className="font-bold text-brand-400 font-mono">{orderNumber}</span>
               </div>
             </div>
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-gray-900/50">
               Please allow 1–3 business days for wire transfers. Your order will be processed once payment clears.
             </p>
           </div>
         )}
       </div>
 
-      <div className="space-y-3 text-sm text-white/40 mb-10">
+      <div className="space-y-3 text-sm text-gray-900/40 mb-10">
         <p>A confirmation email has been sent with your order details.</p>
         <p>Your order will ship once payment is confirmed. Questions? Contact us anytime.</p>
       </div>

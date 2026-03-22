@@ -58,7 +58,7 @@ export default async function ProductPage({ params }: Props) {
             {mainImage ? (
               <Image src={mainImage.url} alt={mainImage.alt ?? product.name} fill className="object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-white/10">
+              <div className="w-full h-full flex items-center justify-center text-gray-900/10">
                 <span className="text-8xl font-bold">VP</span>
               </div>
             )}
@@ -82,7 +82,7 @@ export default async function ProductPage({ params }: Props) {
 
           <div>
             <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-            {product.sku && <p className="text-white/30 text-sm">SKU: {product.sku}</p>}
+            {product.sku && <p className="text-gray-900/30 text-sm">SKU: {product.sku}</p>}
           </div>
 
           {/* Price */}
@@ -90,7 +90,7 @@ export default async function ProductPage({ params }: Props) {
             <span className="text-4xl font-bold">{formatPrice(product.price)}</span>
             {product.comparePrice && (
               <>
-                <span className="text-xl text-white/40 line-through">{formatPrice(product.comparePrice)}</span>
+                <span className="text-xl text-gray-900/40 line-through">{formatPrice(product.comparePrice)}</span>
                 <Badge variant="success">-{discountPct}%</Badge>
               </>
             )}
@@ -106,7 +106,7 @@ export default async function ProductPage({ params }: Props) {
 
           {/* Short description */}
           {product.shortDesc && (
-            <p className="text-white/60 leading-relaxed">{product.shortDesc}</p>
+            <p className="text-gray-900/60 leading-relaxed">{product.shortDesc}</p>
           )}
 
           {/* Add to cart */}
@@ -123,7 +123,7 @@ export default async function ProductPage({ params }: Props) {
           />
 
           {/* Trust badges */}
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-300/30">
             {[
               { icon: Shield, label: 'Private & Secure' },
               { icon: Package, label: 'Discreet Shipping' },
@@ -131,15 +131,15 @@ export default async function ProductPage({ params }: Props) {
             ].map((item) => (
               <div key={item.label} className="flex flex-col items-center gap-2 text-center">
                 <item.icon className="w-5 h-5 text-brand-400" />
-                <span className="text-xs text-white/40">{item.label}</span>
+                <span className="text-xs text-gray-900/40">{item.label}</span>
               </div>
             ))}
           </div>
 
           {/* RUO Disclaimer */}
-          <div className="rounded-xl border border-white/5 bg-white/2 px-4 py-3">
-            <p className="text-[11px] text-white/30 leading-relaxed">
-              <strong className="text-white/40">For Research Use Only.</strong> Not for human consumption. Not intended to diagnose, treat, cure, or prevent any disease. Not evaluated by the FDA. By purchasing you confirm these are for legitimate research purposes.
+          <div className="rounded-xl border border-gray-300/30 bg-gray-900/3 px-4 py-3">
+            <p className="text-[11px] text-gray-900/30 leading-relaxed">
+              <strong className="text-gray-900/40">For Research Use Only.</strong> Not for human consumption. Not intended to diagnose, treat, cure, or prevent any disease. Not evaluated by the FDA. By purchasing you confirm these are for legitimate research purposes.
             </p>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default async function ProductPage({ params }: Props) {
       {product.description && (
         <div className="mt-16 glass rounded-2xl p-8">
           <h2 className="text-2xl font-bold mb-6">Product Details</h2>
-          <div className="prose prose-invert max-w-none text-white/70 whitespace-pre-wrap">
+          <div className="prose prose-invert max-w-none text-gray-900/70 whitespace-pre-wrap">
             {product.description}
           </div>
         </div>
@@ -165,13 +165,13 @@ export default async function ProductPage({ params }: Props) {
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i} className={i < review.rating ? 'text-amber-400' : 'text-white/20'}>★</span>
+                      <span key={i} className={i < review.rating ? 'text-amber-400' : 'text-gray-900/20'}>★</span>
                     ))}
                   </div>
                   <span className="font-semibold text-sm">{review.user.name ?? 'Anonymous'}</span>
                 </div>
                 {review.title && <h4 className="font-medium mb-1">{review.title}</h4>}
-                {review.body && <p className="text-white/60 text-sm">{review.body}</p>}
+                {review.body && <p className="text-gray-900/60 text-sm">{review.body}</p>}
               </div>
             ))}
           </div>

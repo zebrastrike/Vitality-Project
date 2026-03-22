@@ -13,7 +13,7 @@ export default function BlogPage() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="mb-12">
         <h1 className="text-4xl font-bold mb-4">Insights &amp; Research</h1>
-        <p className="text-white/50 text-lg leading-relaxed">
+        <p className="text-gray-900/50 text-lg leading-relaxed">
           News, analysis, and perspectives on the peptide research landscape.
         </p>
       </div>
@@ -31,10 +31,10 @@ export default function BlogPage() {
             <h2 className="text-lg font-bold mb-2 group-hover:text-brand-400 transition-colors">
               {post.title}
             </h2>
-            <p className="text-white/50 text-sm leading-relaxed line-clamp-2 mb-4">
+            <p className="text-gray-900/50 text-sm leading-relaxed line-clamp-2 mb-4">
               {post.excerpt}
             </p>
-            <div className="mt-auto flex items-center justify-between text-xs text-white/30">
+            <div className="mt-auto flex items-center justify-between text-xs text-gray-900/30">
               <span>
                 {new Date(post.date).toLocaleDateString('en-US', {
                   month: 'short',

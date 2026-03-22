@@ -12,7 +12,7 @@ export default function ShippingPage() {
         <h1 className="text-4xl font-bold">Shipping Policy</h1>
       </div>
 
-      <div className="space-y-6 text-white/60 text-sm leading-relaxed">
+      <div className="space-y-6 text-gray-900/60 text-sm leading-relaxed">
         {[
           {
             title: 'Processing Time',
@@ -44,7 +44,7 @@ export default function ShippingPage() {
           },
         ].map((item) => (
           <div key={item.title} className="glass rounded-2xl p-6">
-            <h2 className="font-semibold text-white mb-2">{item.title}</h2>
+            <h2 className="font-semibold text-gray-900 mb-2">{item.title}</h2>
             <p>{item.body}</p>
           </div>
         ))}

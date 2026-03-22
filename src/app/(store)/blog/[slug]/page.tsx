@@ -52,7 +52,7 @@ export default async function BlogPostPage({ params }: Props) {
             {post.category}
           </span>
           <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
-          <div className="flex items-center gap-4 text-sm text-white/40">
+          <div className="flex items-center gap-4 text-sm text-gray-900/40">
             <time dateTime={post.date}>
               {new Date(post.date).toLocaleDateString('en-US', {
                 month: 'long',
@@ -67,14 +67,14 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* Content */}
         <div
-          className="prose prose-invert prose-p:text-white/60 prose-p:leading-relaxed prose-headings:text-white max-w-none space-y-5 mb-12"
+          className="prose prose-invert prose-p:text-gray-900/60 prose-p:leading-relaxed prose-headings:text-gray-900 max-w-none space-y-5 mb-12"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
         {/* Related Links */}
         {post.relatedLinks.length > 0 && (
           <div className="glass rounded-2xl p-6 mb-10">
-            <h2 className="text-sm font-medium uppercase tracking-widest text-white/40 mb-4">
+            <h2 className="text-sm font-medium uppercase tracking-widest text-gray-900/40 mb-4">
               Related
             </h2>
             <div className="flex flex-wrap gap-3">
@@ -94,7 +94,7 @@ export default async function BlogPostPage({ params }: Props) {
         {/* Back link */}
         <Link
           href="/blog"
-          className="text-sm text-white/40 hover:text-white transition-colors"
+          className="text-sm text-gray-900/40 hover:text-gray-900 transition-colors"
         >
           ← Back to Blog
         </Link>

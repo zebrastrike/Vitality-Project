@@ -73,7 +73,7 @@ export default function BioactivePeptidesPage() {
           Peptide Science
         </p>
         <h1 className="text-4xl font-bold mb-4">Bioactive Peptides</h1>
-        <p className="text-white/50 text-lg leading-relaxed">
+        <p className="text-gray-900/50 text-lg leading-relaxed">
           What makes a peptide bioactive, where they come from, how they work, and why
           they matter for modern research.
         </p>
@@ -83,7 +83,7 @@ export default function BioactivePeptidesPage() {
       <div className="glass rounded-xl p-5 mb-10 border border-brand-500/20">
         <div className="flex gap-3">
           <FlaskConical className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-white/50 leading-relaxed">
+          <p className="text-sm text-gray-900/50 leading-relaxed">
             The information on this page is provided for educational and research purposes only. It
             does not constitute medical advice and is not intended to diagnose, treat, cure, or
             prevent any disease. All products referenced are sold for research use only.
@@ -96,7 +96,7 @@ export default function BioactivePeptidesPage() {
         <p className="text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">
           Definition
         </p>
-        <p className="text-white/80 text-lg leading-relaxed">
+        <p className="text-gray-900/80 text-lg leading-relaxed">
           A bioactive peptide is a short amino acid sequence that produces a specific, measurable
           biological effect — whether through receptor binding, enzyme modulation, membrane
           interaction, or gene expression regulation. Bioactivity distinguishes functional signaling
@@ -116,7 +116,7 @@ export default function BioactivePeptidesPage() {
               </div>
               <div className="space-y-4">
                 {section.content.map((paragraph, i) => (
-                  <p key={i} className="text-white/60 leading-relaxed">
+                  <p key={i} className="text-gray-900/60 leading-relaxed">
                     {paragraph}
                   </p>
                 ))}
@@ -130,7 +130,7 @@ export default function BioactivePeptidesPage() {
           <p className="text-brand-400 text-xs font-semibold uppercase tracking-widest mb-3">
             Core Principle
           </p>
-          <p className="text-white/90 text-lg leading-relaxed font-medium">
+          <p className="text-gray-900/90 text-lg leading-relaxed font-medium">
             Bioactive peptides are not synthetic inventions — they are naturally occurring signaling
             molecules that research has learned to isolate, characterize, and reproduce with
             laboratory precision.

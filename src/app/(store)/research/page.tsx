@@ -35,7 +35,7 @@ export default function ResearchPage() {
       <div className="mb-12">
         <p className="text-brand-400 text-sm font-medium uppercase tracking-widest mb-3">The Science</p>
         <h1 className="text-4xl font-bold mb-4">Research Landscape</h1>
-        <p className="text-white/50 text-lg leading-relaxed">
+        <p className="text-gray-900/50 text-lg leading-relaxed">
           An overview of the academic and preclinical research areas our product catalog supports. All information below is derived from published scientific literature and is presented for educational purposes only.
         </p>
       </div>
@@ -44,7 +44,7 @@ export default function ResearchPage() {
       <div className="glass rounded-xl p-5 mb-10 border border-brand-500/20">
         <div className="flex gap-3">
           <FlaskConical className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-white/50 leading-relaxed">
+          <p className="text-sm text-gray-900/50 leading-relaxed">
             The information on this page describes the general research landscape and is not a claim that any product prevents, treats, or cures any condition. All products are sold for research use only and are not approved for human use by the FDA or any other regulatory body.
           </p>
         </div>
@@ -59,14 +59,14 @@ export default function ResearchPage() {
               </div>
               <h2 className="text-xl font-bold">{area.title}</h2>
             </div>
-            <p className="text-white/60 leading-relaxed">{area.body}</p>
+            <p className="text-gray-900/60 leading-relaxed">{area.body}</p>
           </div>
         ))}
       </div>
 
       <div className="mt-10 glass rounded-2xl p-8 text-center">
         <h2 className="text-xl font-bold mb-2">Certificate of Analysis</h2>
-        <p className="text-white/50 text-sm leading-relaxed max-w-md mx-auto">
+        <p className="text-gray-900/50 text-sm leading-relaxed max-w-md mx-auto">
           Third-party CoA documentation is available for all products upon request. Contact us after placing your order.
         </p>
       </div>

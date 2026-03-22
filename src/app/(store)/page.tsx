@@ -67,7 +67,7 @@ export default async function HomePage() {
               With Precision
             </h1>
 
-            <p className="text-xl text-white/50 mb-10 max-w-xl leading-relaxed">
+            <p className="text-xl text-gray-900/50 mb-10 max-w-xl leading-relaxed">
               Premium peptides and performance compounds. Sourced with integrity, delivered on private infrastructure you can trust.
             </p>
 
@@ -88,7 +88,7 @@ export default async function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="py-24 border-y border-white/5">
+      <section className="py-24 border-y border-gray-300/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((f) => (
@@ -96,8 +96,8 @@ export default async function HomePage() {
                 <div className="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center mb-4">
                   <f.icon className="w-6 h-6 text-brand-400" />
                 </div>
-                <h3 className="font-semibold text-white mb-2">{f.title}</h3>
-                <p className="text-sm text-white/40">{f.desc}</p>
+                <h3 className="font-semibold text-gray-900 mb-2">{f.title}</h3>
+                <p className="text-sm text-gray-900/40">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -111,7 +111,7 @@ export default async function HomePage() {
             <div className="flex items-end justify-between mb-12">
               <div>
                 <h2 className="text-3xl font-bold mb-2">Featured Products</h2>
-                <p className="text-white/40">Our most popular compounds</p>
+                <p className="text-gray-900/40">Our most popular compounds</p>
               </div>
               <Link href="/products" className="text-brand-400 hover:text-brand-300 text-sm flex items-center gap-1">
                 View all <ArrowRight className="w-4 h-4" />
@@ -135,7 +135,7 @@ export default async function HomePage() {
             </div>
             <div className="relative">
               <h2 className="text-4xl font-bold mb-4">Ready to Optimize?</h2>
-              <p className="text-white/50 mb-8 max-w-md mx-auto">
+              <p className="text-gray-900/50 mb-8 max-w-md mx-auto">
                 Join our affiliate program and earn commissions sharing what works.
               </p>
               <div className="flex flex-wrap justify-center gap-4">

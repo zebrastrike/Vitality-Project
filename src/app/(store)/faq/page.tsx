@@ -91,12 +91,12 @@ export default function FaqPage() {
       <div className="space-y-10">
         {faqs.map((section) => (
           <div key={section.section}>
-            <h2 className="text-sm font-semibold text-white/40 uppercase tracking-widest mb-4">{section.section}</h2>
+            <h2 className="text-sm font-semibold text-gray-900/40 uppercase tracking-widest mb-4">{section.section}</h2>
             <div className="space-y-3">
               {section.items.map((item) => (
                 <div key={item.q} className="glass rounded-2xl p-6">
                   <h3 className="font-semibold mb-2">{item.q}</h3>
-                  <p className="text-white/55 text-sm leading-relaxed">{item.a}</p>
+                  <p className="text-gray-900/55 text-sm leading-relaxed">{item.a}</p>
                 </div>
               ))}
             </div>

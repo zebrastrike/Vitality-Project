@@ -10,10 +10,10 @@ export default function PrivacyPage() {
       <div className="mb-10">
         <p className="text-brand-400 text-sm font-medium uppercase tracking-widest mb-3">Legal</p>
         <h1 className="text-4xl font-bold">Privacy Policy</h1>
-        <p className="text-white/30 text-sm mt-3">Last updated: March 2026</p>
+        <p className="text-gray-900/30 text-sm mt-3">Last updated: March 2026</p>
       </div>
 
-      <div className="space-y-6 text-white/60 text-sm leading-relaxed">
+      <div className="space-y-6 text-gray-900/60 text-sm leading-relaxed">
         {[
           {
             title: 'What We Collect',
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
           },
         ].map((item) => (
           <div key={item.title} className="glass rounded-2xl p-6">
-            <h2 className="font-semibold text-white mb-2">{item.title}</h2>
+            <h2 className="font-semibold text-gray-900 mb-2">{item.title}</h2>
             <p>{item.body}</p>
           </div>
         ))}
