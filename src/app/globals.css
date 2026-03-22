@@ -15,11 +15,11 @@
   --color-brand-900: #2e3481;
   --color-brand-950: #1c1f4d;
 
-  /* Dark backgrounds */
-  --color-dark-900: #0a0a0f;
-  --color-dark-800: #111118;
-  --color-dark-700: #1a1a26;
-  --color-dark-600: #22223a;
+  /* Lighter backgrounds — soft cool gray-blue */
+  --color-dark-900: #1a1d2e;
+  --color-dark-800: #212438;
+  --color-dark-700: #2a2e44;
+  --color-dark-600: #343852;
 
   /* Fonts */
   --font-sans: var(--font-inter), system-ui, sans-serif;
@@ -45,23 +45,104 @@
 
   body {
     @apply bg-dark-900 text-white;
+    overflow-x: hidden;
+  }
+
+  /* Full liquid glass background — animated mesh of brand-tinted orbs */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      /* Large top-left brand glow */
+      radial-gradient(ellipse 70% 60% at 15% 10%, rgba(98, 112, 242, 0.18), transparent 70%),
+      /* Mid-right warm accent */
+      radial-gradient(ellipse 50% 50% at 85% 35%, rgba(129, 147, 248, 0.12), transparent 65%),
+      /* Bottom-center deep brand */
+      radial-gradient(ellipse 80% 50% at 50% 95%, rgba(79, 87, 226, 0.14), transparent 70%),
+      /* Center diffused light */
+      radial-gradient(ellipse 60% 60% at 45% 50%, rgba(167, 184, 252, 0.06), transparent 60%),
+      /* Top-right subtle highlight */
+      radial-gradient(ellipse 40% 35% at 75% 5%, rgba(197, 213, 254, 0.08), transparent 55%);
+    animation: mesh-drift 25s ease-in-out infinite alternate;
+  }
+
+  /* Noise overlay for texture */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    pointer-events: none;
+  }
+
+  @keyframes mesh-drift {
+    0% {
+      background-position: 0% 0%, 100% 30%, 50% 100%, 40% 50%, 80% 0%;
+    }
+    50% {
+      background-position: 20% 10%, 75% 45%, 60% 85%, 50% 40%, 65% 15%;
+    }
+    100% {
+      background-position: 10% 20%, 90% 25%, 45% 95%, 55% 55%, 70% 5%;
+    }
   }
 
   ::-webkit-scrollbar {
     width: 6px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-dark-800;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-dark-600 rounded-full;
+    @apply bg-white/10 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-white/20;
   }
 }
 
 /* ── Utility classes ────────────────────────────────────────────────────── */
 @layer utilities {
+  /* Liquid glass — frosted, refractive, layered */
   .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10;
+    @apply backdrop-blur-xl border border-white/12 shadow-lg rounded-2xl;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 40%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+  }
+
+  /* Elevated glass — for nav, modals, dropdowns */
+  .glass-elevated {
+    @apply backdrop-blur-2xl border border-white/15 shadow-xl;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(255, 255, 255, 0.04) 40%,
+      rgba(255, 255, 255, 0.10) 100%
+    );
+    box-shadow:
+      0 12px 48px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  /* Subtle glass — for inline badges, small elements */
+  .glass-subtle {
+    @apply backdrop-blur-md border border-white/8;
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .text-gradient {
@@ -69,6 +150,14 @@
   }
 
   .card-hover {
-    @apply transition-all duration-300 hover:border-brand-500/50 hover:shadow-lg hover:shadow-brand-500/10;
+    @apply transition-all duration-300;
+  }
+  .card-hover:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 20px rgba(98, 112, 242, 0.08);
+    transform: translateY(-2px);
   }
 }

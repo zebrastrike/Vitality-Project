@@ -30,22 +30,20 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <nav className="fixed top-0 w-full z-50 glass border-b border-white/5">
+    <nav className="fixed top-0 w-full z-50 glass-elevated border-b border-white/8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
 
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-1.5">
-              <Image
-                src="/logo.jpg"
-                alt="The Vitality Project"
-                width={480}
-                height={180}
-                className="h-28 w-auto object-contain rounded-lg"
-                priority
-              />
-            </div>
+            <Image
+              src="/logo.jpg"
+              alt="The Vitality Project"
+              width={280}
+              height={105}
+              className="h-16 w-auto object-contain rounded-xl shadow-sm"
+              priority
+            />
           </Link>
 
           {/* Desktop nav */}
