@@ -39,9 +39,9 @@ export function Navbar() {
             <Image
               src="/logo.jpg"
               alt="The Vitality Project"
-              width={280}
-              height={105}
-              className="h-16 w-auto object-contain rounded-xl shadow-sm"
+              width={480}
+              height={60}
+              className="h-10 w-[280px] object-cover object-center rounded-lg"
               priority
             />
           </Link>
