@@ -90,17 +90,13 @@
     -webkit-backdrop-filter: saturate(180%) brightness(140%);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.20);
     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .glass:hover {
     background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.28);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.20),
-      0 0 20px rgba(98, 112, 242, 0.15),
-      0 0 40px rgba(98, 112, 242, 0.08);
+    box-shadow: 0 0 20px rgba(98, 112, 242, 0.15), 0 0 40px rgba(98, 112, 242, 0.08);
   }
 
   .glass-elevated {
@@ -109,17 +105,13 @@
     -webkit-backdrop-filter: saturate(200%) brightness(150%);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 20px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .glass-elevated:hover {
     background: rgba(255, 255, 255, 0.14);
     border-color: rgba(255, 255, 255, 0.30);
-    box-shadow:
-      0 12px 48px rgba(0, 0, 0, 0.25),
-      0 0 24px rgba(98, 112, 242, 0.18),
-      0 0 48px rgba(98, 112, 242, 0.10);
+    box-shadow: 0 0 24px rgba(98, 112, 242, 0.18), 0 0 48px rgba(98, 112, 242, 0.10);
   }
 
   .glass-subtle {
@@ -137,14 +129,6 @@
     box-shadow: 0 0 16px rgba(98, 112, 242, 0.12);
   }
 
-  /* No glow on nav, footer, form containers */
-  nav.glass-elevated:hover,
-  footer .glass:hover,
-  form .glass:hover,
-  form .glass-elevated:hover {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.20);
-  }
-
   .text-gradient {
     @apply bg-gradient-to-r from-brand-300 to-brand-500 bg-clip-text text-transparent;
   }
@@ -157,9 +141,6 @@
     transform: translateY(-4px);
     background: rgba(255, 255, 255, 0.14);
     border-color: rgba(255, 255, 255, 0.30);
-    box-shadow:
-      0 20px 60px rgba(0, 0, 0, 0.25),
-      0 0 24px rgba(98, 112, 242, 0.18),
-      0 0 48px rgba(98, 112, 242, 0.10);
+    box-shadow: 0 0 24px rgba(98, 112, 242, 0.18), 0 0 48px rgba(98, 112, 242, 0.10);
   }
 }
