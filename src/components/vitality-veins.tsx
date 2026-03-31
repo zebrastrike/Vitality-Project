@@ -3,318 +3,205 @@
 import { useEffect, useRef, useCallback } from 'react'
 
 /*
- * VitalityVeins — dense futuristic vascular network
+ * VitalityVeins — ultra-dense vascular network
  *
- * Ultra-thin lines, tons of them, connecting every glass card.
- * Intermediate routing nodes create a dense capillary mesh.
- * Hover a card → pulse cascades through the entire network.
+ * Millions of hairline capillaries. Already visible on load.
+ * Mouse movement anywhere sends light pulses outward.
+ * Glass cards are organs in a living body.
  */
-
-interface Node {
-  x: number
-  y: number
-  el: Element | null
-  connections: number[]
-  pulse: number
-  pulseVel: number
-  baseOpacity: number
-  size: number // 0=micro, 1=small, 2=card
-}
-
-interface Vein {
-  from: number
-  to: number
-  progress: number
-  pulse: number
-  pulsePos: number
-  thickness: number
-}
 
 export function VitalityVeins() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const nodesRef = useRef<Node[]>([])
-  const veinsRef = useRef<Vein[]>([])
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null)
   const animRef = useRef<number>(0)
-  const hoveredRef = useRef<number>(-1)
-  const lastTimeRef = useRef<number>(0)
+  const mouseRef = useRef({ x: -1, y: -1, active: false })
+  const lastPulseRef = useRef(0)
+  const nodesRef = useRef<Float32Array>(new Float32Array(0))  // x, y, pulse, baseAlpha
+  const edgesRef = useRef<Uint32Array>(new Uint32Array(0))    // from, to pairs
+  const nodeCountRef = useRef(0)
+  const edgeCountRef = useRef(0)
+  const builtRef = useRef(false)
 
-  const brand = { r: 129, g: 147, b: 248 }
+  const R = 129, G = 147, B = 248
 
   const buildNetwork = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
     const vw = window.innerWidth
-    const pageH = document.documentElement.scrollHeight
-    const nodes: Node[] = []
-    const veins: Vein[] = []
+    const vh = window.innerHeight
+    const dpr = window.devicePixelRatio || 1
 
-    // ── Card nodes ──
-    const cards = document.querySelectorAll('.glass, .glass-elevated, .card-hover')
-    const seen = new Set<Element>()
-    cards.forEach((card) => {
-      if (seen.has(card)) return
-      seen.add(card)
-      const cr = card.getBoundingClientRect()
-      nodes.push({
-        x: cr.left + cr.width / 2,
-        y: cr.top + window.scrollY + cr.height / 2,
-        el: card, connections: [], pulse: 0, pulseVel: 0,
-        baseOpacity: 0.25, size: 2,
-      })
-    })
+    // Dense grid — 40px spacing = ~2500 nodes on 1920x1080
+    const spacing = 40
+    const cols = Math.ceil(vw / spacing) + 1
+    const rows = Math.ceil(vh / spacing) + 1
+    const nodeCount = cols * rows
 
-    const cardCount = nodes.length
-
-    // ── Intermediate routing nodes — dense grid between cards ──
-    // Creates the "vascular network" feel
-    const gridSpacing = 120 // pixels between grid nodes
-    const cols = Math.ceil(vw / gridSpacing)
-    const rows = Math.ceil(pageH / gridSpacing)
+    // 4 floats per node: x, y, pulse, baseAlpha
+    const nodes = new Float32Array(nodeCount * 4)
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        // Jitter to avoid perfect grid
-        const jx = (Math.sin(r * 13.7 + c * 7.3) * 0.5 + 0.5) * gridSpacing * 0.4
-        const jy = (Math.cos(r * 9.1 + c * 11.2) * 0.5 + 0.5) * gridSpacing * 0.4
-        const x = c * gridSpacing + gridSpacing / 2 + jx
-        const y = r * gridSpacing + gridSpacing / 2 + jy
+        const i = (r * cols + c) * 4
+        // Jitter for organic feel
+        const jx = Math.sin(r * 17.3 + c * 31.7) * spacing * 0.25
+        const jy = Math.cos(r * 23.1 + c * 13.9) * spacing * 0.25
+        nodes[i]     = c * spacing + jx       // x
+        nodes[i + 1] = r * spacing + jy       // y
+        nodes[i + 2] = 0                       // pulse
+        nodes[i + 3] = 0.025 + Math.abs(Math.sin(r * 0.3 + c * 0.7)) * 0.015 // baseAlpha
+      }
+    }
 
-        // Skip if too close to an existing card node
-        let tooClose = false
-        for (let i = 0; i < cardCount; i++) {
-          const dx = nodes[i].x - x
-          const dy = nodes[i].y - y
-          if (dx * dx + dy * dy < 3600) { tooClose = true; break }
+    // Edges: connect to right neighbor and bottom neighbor + one diagonal
+    // This creates a dense mesh with ~3 edges per node
+    const edgeList: number[] = []
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const idx = r * cols + c
+        // Right
+        if (c < cols - 1) {
+          edgeList.push(idx, idx + 1)
         }
-        if (tooClose) continue
-
-        nodes.push({
-          x, y, el: null, connections: [], pulse: 0, pulseVel: 0,
-          baseOpacity: 0.08, size: 0,
-        })
-      }
-    }
-
-    // ── Edge anchor nodes ──
-    for (let i = 0; i < 30; i++) {
-      const side = i % 4
-      let x: number, y: number
-      const t = (i / 30) * pageH
-      switch (side) {
-        case 0: x = -10; y = t; break
-        case 1: x = vw + 10; y = t; break
-        case 2: x = (i / 30) * vw; y = -10; break
-        default: x = (i / 30) * vw; y = pageH + 10; break
-      }
-      nodes.push({
-        x, y, el: null, connections: [], pulse: 0, pulseVel: 0,
-        baseOpacity: 0.04, size: 0,
-      })
-    }
-
-    // ── Connect: each node to nearest neighbors ──
-    const maxDistCard = 500  // cards connect further
-    const maxDistGrid = gridSpacing * 1.8
-    const maxConnCard = 5
-    const maxConnGrid = 3
-
-    for (let i = 0; i < nodes.length; i++) {
-      const isCard = i < cardCount
-      const maxDist = isCard ? maxDistCard : maxDistGrid
-      const maxConn = isCard ? maxConnCard : maxConnGrid
-
-      const dists: { idx: number; dist: number }[] = []
-      for (let j = 0; j < nodes.length; j++) {
-        if (i === j) continue
-        const dx = nodes[i].x - nodes[j].x
-        const dy = nodes[i].y - nodes[j].y
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < maxDist) dists.push({ idx: j, dist })
-      }
-      dists.sort((a, b) => a.dist - b.dist)
-
-      let added = 0
-      for (const { idx } of dists) {
-        if (added >= maxConn) break
-        // Avoid duplicate veins
-        const exists = veins.some(
-          (v) => (v.from === i && v.to === idx) || (v.from === idx && v.to === i)
-        )
-        if (exists) { added++; continue }
-
-        nodes[i].connections.push(idx)
-        nodes[idx].connections.push(i)
-
-        const isCardVein = i < cardCount || idx < cardCount
-        veins.push({
-          from: i, to: idx, progress: 0, pulse: 0, pulsePos: 0,
-          thickness: isCardVein ? 0.5 : 0.3,
-        })
-        added++
+        // Down
+        if (r < rows - 1) {
+          edgeList.push(idx, idx + cols)
+        }
+        // Diagonal (alternating direction for organic feel)
+        if (r < rows - 1 && c < cols - 1 && (r + c) % 2 === 0) {
+          edgeList.push(idx, idx + cols + 1)
+        }
+        if (r < rows - 1 && c > 0 && (r + c) % 3 === 0) {
+          edgeList.push(idx, idx + cols - 1)
+        }
       }
     }
 
     nodesRef.current = nodes
-    veinsRef.current = veins
+    edgesRef.current = new Uint32Array(edgeList)
+    nodeCountRef.current = nodeCount
+    edgeCountRef.current = edgeList.length / 2
+    builtRef.current = true
   }, [])
-
-  const handleHover = useCallback((e: MouseEvent) => {
-    const nodes = nodesRef.current
-    const target = e.target as Element
-    let found = -1
-    for (let i = 0; i < nodes.length; i++) {
-      if (nodes[i].el && (nodes[i].el === target || nodes[i].el!.contains(target))) {
-        found = i; break
-      }
-    }
-    if (found !== hoveredRef.current) {
-      hoveredRef.current = found
-      if (found >= 0) triggerPulse(found)
-    }
-  }, [])
-
-  const triggerPulse = (nodeIdx: number) => {
-    const nodes = nodesRef.current
-    const veins = veinsRef.current
-    if (!nodes[nodeIdx]) return
-    nodes[nodeIdx].pulse = 1.0
-    nodes[nodeIdx].pulseVel = 0.018
-    veins.forEach((v) => {
-      if (v.from === nodeIdx || v.to === nodeIdx) {
-        v.pulse = 1.0
-        v.pulsePos = v.from === nodeIdx ? 0 : 1
-      }
-    })
-  }
 
   const draw = useCallback((time: number) => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const ctx = ctxRef.current
+    if (!canvas || !ctx || !builtRef.current) {
+      animRef.current = requestAnimationFrame(draw)
+      return
+    }
 
     const dpr = window.devicePixelRatio || 1
-    const dt = Math.min((time - (lastTimeRef.current || time)) / 1000, 0.05)
-    lastTimeRef.current = time
-
-    const scrollY = window.scrollY
     const vw = window.innerWidth
     const vh = window.innerHeight
+    const nodes = nodesRef.current
+    const edges = edgesRef.current
+    const nodeCount = nodeCountRef.current
+    const edgeCount = edgeCountRef.current
+    const mouse = mouseRef.current
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.save()
     ctx.scale(dpr, dpr)
 
-    const nodes = nodesRef.current
-    const veins = veinsRef.current
-
-    // ── Update ──
-    veins.forEach((v) => {
-      if (v.progress < 1) v.progress = Math.min(1, v.progress + dt * 0.25)
-      if (v.pulse > 0) {
-        const dir = v.pulsePos < 0.5 ? 1 : -1
-        v.pulsePos += dir * dt * 1.2
-        v.pulse -= dt * 0.4
-        if (v.pulse <= 0) { v.pulse = 0; v.pulsePos = 0 }
-
-        if ((dir === 1 && v.pulsePos >= 0.92) || (dir === -1 && v.pulsePos <= 0.08)) {
-          const targetIdx = dir === 1 ? v.to : v.from
-          if (nodes[targetIdx] && nodes[targetIdx].pulse < 0.25) {
-            nodes[targetIdx].pulse = v.pulse * 0.65
-            nodes[targetIdx].pulseVel = 0.012
-            veins.forEach((v2) => {
-              if (v2 === v) return
-              if ((v2.from === targetIdx || v2.to === targetIdx) && v2.pulse < 0.15) {
-                v2.pulse = v.pulse * 0.45
-                v2.pulsePos = v2.from === targetIdx ? 0 : 1
-              }
-            })
-          }
+    // ── Mouse pulse injection ──
+    // Every frame the mouse is active, inject pulse into nearby nodes
+    if (mouse.active && mouse.x > 0) {
+      const pulseRadius = 120
+      const r2 = pulseRadius * pulseRadius
+      for (let i = 0; i < nodeCount; i++) {
+        const ni = i * 4
+        const dx = nodes[ni] - mouse.x
+        const dy = nodes[ni + 1] - mouse.y
+        const d2 = dx * dx + dy * dy
+        if (d2 < r2) {
+          const strength = 1 - Math.sqrt(d2) / pulseRadius
+          nodes[ni + 2] = Math.min(1, nodes[ni + 2] + strength * 0.15)
         }
       }
-    })
+    }
 
-    nodes.forEach((n) => {
-      if (n.pulse > 0) {
-        n.pulse -= n.pulseVel
-        if (n.pulse < 0) n.pulse = 0
-      }
-    })
+    // ── Propagate pulse to neighbors + decay ──
+    // Simple diffusion: each node averages a tiny bit from connected neighbors
+    // We do this on edges for efficiency
+    for (let e = 0; e < edgeCount; e++) {
+      const ei = e * 2
+      const a = edges[ei]
+      const b = edges[ei + 1]
+      const ai = a * 4
+      const bi = b * 4
+      const pa = nodes[ai + 2]
+      const pb = nodes[bi + 2]
+      const diff = (pa - pb) * 0.03
+      nodes[ai + 2] -= diff
+      nodes[bi + 2] += diff
+    }
 
-    // ── Draw veins ──
-    veins.forEach((v) => {
-      const a = nodes[v.from]
-      const b = nodes[v.to]
-      if (!a || !b) return
+    // Decay all pulses
+    for (let i = 0; i < nodeCount; i++) {
+      const ni = i * 4
+      nodes[ni + 2] *= 0.97 // smooth decay
+    }
 
-      const ay = a.y - scrollY
-      const by = b.y - scrollY
-      if ((ay < -300 && by < -300) || (ay > vh + 300 && by > vh + 300)) return
+    // ── Draw edges ──
+    ctx.lineCap = 'round'
+    for (let e = 0; e < edgeCount; e++) {
+      const ei = e * 2
+      const a = edges[ei]
+      const b = edges[ei + 1]
+      const ai = a * 4
+      const bi = b * 4
 
-      const drawTo = v.progress
-      const mx = a.x + (b.x - a.x) * drawTo
-      const my = ay + (by - ay) * drawTo
+      const ax = nodes[ai], ay = nodes[ai + 1]
+      const bx = nodes[bi], by = nodes[bi + 1]
 
-      // Organic S-curve
-      const dx = b.x - a.x
-      const dy = by - ay
-      const len = Math.sqrt(dx * dx + dy * dy)
-      const bend = Math.sin(a.x * 0.01 + a.y * 0.007) * len * 0.06
-      const cpx = (a.x + mx) / 2 + (by - ay) / len * bend
-      const cpy = (ay + my) / 2 - (b.x - a.x) / len * bend
+      // Cull off-screen
+      if ((ax < -20 && bx < -20) || (ax > vw + 20 && bx > vw + 20)) continue
+      if ((ay < -20 && by < -20) || (ay > vh + 20 && by > vh + 20)) continue
 
-      const baseAlpha = 0.04 + v.pulse * 0.2
+      const pa = nodes[ai + 2]
+      const pb = nodes[bi + 2]
+      const avgPulse = (pa + pb) * 0.5
+      const baseA = (nodes[ai + 3] + nodes[bi + 3]) * 0.5
+      const alpha = baseA + avgPulse * 0.4
+
+      if (alpha < 0.008) continue
+
       ctx.beginPath()
-      ctx.moveTo(a.x, ay)
-      ctx.quadraticCurveTo(cpx, cpy, mx, my)
-      ctx.strokeStyle = `rgba(${brand.r}, ${brand.g}, ${brand.b}, ${baseAlpha})`
-      ctx.lineWidth = v.thickness
-      ctx.lineCap = 'round'
+      ctx.moveTo(ax, ay)
+      ctx.lineTo(bx, by)
+      ctx.strokeStyle = `rgba(${R}, ${G}, ${B}, ${alpha})`
+      ctx.lineWidth = 0.3 + avgPulse * 0.4
       ctx.stroke()
+    }
 
-      // Pulse dot
-      if (v.pulse > 0.05) {
-        const px = a.x + (b.x - a.x) * v.pulsePos
-        const py = ay + (by - ay) * v.pulsePos
-        const pulseR = 15 + v.pulse * 10
-        const grad = ctx.createRadialGradient(px, py, 0, px, py, pulseR)
-        grad.addColorStop(0, `rgba(${brand.r}, ${brand.g}, ${brand.b}, ${v.pulse * 0.5})`)
-        grad.addColorStop(0.5, `rgba(${brand.r}, ${brand.g}, ${brand.b}, ${v.pulse * 0.15})`)
-        grad.addColorStop(1, 'rgba(129, 147, 248, 0)')
-        ctx.beginPath()
-        ctx.arc(px, py, pulseR, 0, Math.PI * 2)
-        ctx.fillStyle = grad
-        ctx.fill()
-      }
-    })
+    // ── Draw bright pulse nodes ──
+    for (let i = 0; i < nodeCount; i++) {
+      const ni = i * 4
+      const p = nodes[ni + 2]
+      if (p < 0.08) continue
 
-    // ── Draw nodes ──
-    nodes.forEach((n) => {
-      const ny = n.y - scrollY
-      if (ny < -100 || ny > vh + 100) return
+      const x = nodes[ni]
+      const y = nodes[ni + 1]
+      if (x < -10 || x > vw + 10 || y < -10 || y > vh + 10) continue
 
-      const alpha = n.baseOpacity + n.pulse * 0.5
-      const r = n.size === 2 ? 1.5 + n.pulse * 3 : n.size === 1 ? 1 + n.pulse * 1.5 : 0.5 + n.pulse * 1
-
-      // Glow for pulsing nodes
-      if (n.pulse > 0.1) {
-        const gr = r * 8
-        const grad = ctx.createRadialGradient(n.x, ny, 0, n.x, ny, gr)
-        grad.addColorStop(0, `rgba(${brand.r}, ${brand.g}, ${brand.b}, ${n.pulse * 0.25})`)
-        grad.addColorStop(1, 'rgba(129, 147, 248, 0)')
-        ctx.beginPath()
-        ctx.arc(n.x, ny, gr, 0, Math.PI * 2)
-        ctx.fillStyle = grad
-        ctx.fill()
-      }
-
-      // Tiny dot
+      const r = 0.4 + p * 1.5
       ctx.beginPath()
-      ctx.arc(n.x, ny, r, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(${brand.r}, ${brand.g}, ${brand.b}, ${alpha})`
+      ctx.arc(x, y, r, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(${R}, ${G}, ${B}, ${p * 0.6})`
       ctx.fill()
-    })
+
+      // Glow for strong pulses
+      if (p > 0.3) {
+        const gr = 4 + p * 8
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, gr)
+        grad.addColorStop(0, `rgba(${R}, ${G}, ${B}, ${p * 0.2})`)
+        grad.addColorStop(1, `rgba(${R}, ${G}, ${B}, 0)`)
+        ctx.beginPath()
+        ctx.arc(x, y, gr, 0, Math.PI * 2)
+        ctx.fillStyle = grad
+        ctx.fill()
+      }
+    }
 
     ctx.restore()
     animRef.current = requestAnimationFrame(draw)
@@ -330,37 +217,65 @@ export function VitalityVeins() {
       canvas.height = window.innerHeight * dpr
       canvas.style.width = `${window.innerWidth}px`
       canvas.style.height = `${window.innerHeight}px`
-    }
-
-    const init = () => {
-      resize()
+      ctxRef.current = canvas.getContext('2d')
       buildNetwork()
-      animRef.current = requestAnimationFrame(draw)
     }
 
-    const timer = setTimeout(init, 400)
-
-    let scrollTimer: ReturnType<typeof setTimeout>
-    const onScroll = () => {
-      clearTimeout(scrollTimer)
-      scrollTimer = setTimeout(buildNetwork, 200)
+    const onMouse = (e: MouseEvent) => {
+      mouseRef.current.x = e.clientX
+      mouseRef.current.y = e.clientY
+      mouseRef.current.active = true
     }
 
-    const onResize = () => { resize(); buildNetwork() }
+    const onMouseLeave = () => {
+      mouseRef.current.active = false
+    }
 
-    window.addEventListener('resize', onResize)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    document.addEventListener('mousemove', handleHover, { passive: true })
+    // Also pulse from glass card hovers
+    const onHover = (e: MouseEvent) => {
+      const target = e.target as Element
+      const card = target.closest?.('.glass, .glass-elevated, .card-hover')
+      if (card) {
+        const cr = card.getBoundingClientRect()
+        // Inject a strong pulse at card center
+        const cx = cr.left + cr.width / 2
+        const cy = cr.top + cr.height / 2
+        const now = Date.now()
+        if (now - lastPulseRef.current > 100) {
+          lastPulseRef.current = now
+          const nodes = nodesRef.current
+          const nodeCount = nodeCountRef.current
+          const r2 = 200 * 200
+          for (let i = 0; i < nodeCount; i++) {
+            const ni = i * 4
+            const dx = nodes[ni] - cx
+            const dy = nodes[ni + 1] - cy
+            const d2 = dx * dx + dy * dy
+            if (d2 < r2) {
+              const strength = 1 - Math.sqrt(d2) / 200
+              nodes[ni + 2] = Math.min(1, nodes[ni + 2] + strength * 0.5)
+            }
+          }
+        }
+      }
+    }
+
+    resize()
+    animRef.current = requestAnimationFrame(draw)
+
+    window.addEventListener('resize', resize)
+    document.addEventListener('mousemove', onMouse, { passive: true })
+    document.addEventListener('mousemove', onHover, { passive: true })
+    document.addEventListener('mouseleave', onMouseLeave)
 
     return () => {
-      clearTimeout(timer)
-      clearTimeout(scrollTimer)
       cancelAnimationFrame(animRef.current)
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('scroll', onScroll)
-      document.removeEventListener('mousemove', handleHover)
+      window.removeEventListener('resize', resize)
+      document.removeEventListener('mousemove', onMouse)
+      document.removeEventListener('mousemove', onHover)
+      document.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [buildNetwork, draw, handleHover])
+  }, [buildNetwork, draw])
 
   return (
     <canvas
