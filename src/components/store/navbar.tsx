@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 
 const shopCategories = [
   { href: '/products', label: 'All Products' },
+  { href: '/products?category=stacks', label: 'Stacks' },
   { href: '/products?category=repair-recovery', label: 'Repair & Recovery' },
   { href: '/products?category=body-composition', label: 'Body Composition' },
   { href: '/products?category=longevity-aesthetics', label: 'Longevity & Aesthetics' },
@@ -39,9 +40,9 @@ export function Navbar() {
             <Image
               src="/logo.jpg"
               alt="The Vitality Project"
-              width={480}
-              height={60}
-              className="h-10 w-[280px] object-cover object-center rounded-lg"
+              width={320}
+              height={80}
+              className="h-14 w-auto object-contain"
               priority
             />
           </Link>
