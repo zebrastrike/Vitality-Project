@@ -19,10 +19,10 @@ async function getFeaturedProducts() {
 }
 
 const features = [
-  { icon: Shield, title: 'Private Infrastructure', desc: 'Dedicated servers. No third-party cloud dependencies.' },
-  { icon: Lock, title: 'Data Sovereignty', desc: 'Full ownership of your data, transactions, and records.' },
-  { icon: Zap, title: 'Lab Tested', desc: 'Third-party verified. 98%+ purity. CoA on request.' },
-  { icon: Package, title: 'Discreet Shipping', desc: 'Plain packaging. No branding on exterior.' },
+  { icon: Shield, title: 'Private Infrastructure', desc: 'Dedicated servers. No third-party cloud dependencies.', href: '/about' },
+  { icon: Lock, title: 'Data Sovereignty', desc: 'Full ownership of your data, transactions, and records.', href: '/privacy' },
+  { icon: Zap, title: 'Lab Tested', desc: 'Third-party verified. 98%+ purity. CoA on request.', href: '/peptides-safety' },
+  { icon: Package, title: 'Discreet Shipping', desc: 'Plain packaging. No branding on exterior.', href: '/shipping' },
 ]
 
 const categories = [
@@ -83,13 +83,15 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {features.map((f) => (
-              <div key={f.title} className="glass rounded-2xl p-5 card-hover">
-                <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center mb-3">
-                  <f.icon className="w-5 h-5 text-brand-400" />
+              <Link key={f.title} href={f.href}>
+                <div className="glass rounded-2xl p-5 card-hover h-full">
+                  <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center mb-3">
+                    <f.icon className="w-5 h-5 text-brand-400" />
+                  </div>
+                  <h3 className="font-semibold text-white text-sm mb-1">{f.title}</h3>
+                  <p className="text-xs text-white/40 leading-relaxed">{f.desc}</p>
                 </div>
-                <h3 className="font-semibold text-white text-sm mb-1">{f.title}</h3>
-                <p className="text-xs text-white/40 leading-relaxed">{f.desc}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
