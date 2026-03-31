@@ -330,10 +330,25 @@ All compounds are lyophilized, third-party tested (≥98% purity), with CoA avai
 
   const allProducts = [...products, ...stacks]
 
+  // Image mapping — slug to file path
+  const imageMap: Record<string, string> = {
+    'bpc-157-5mg': '/images/products/bpc-157-5mg.png',
+    'tb-500-5mg': '/images/products/tb-500-5mg.png',
+    'ghk-cu-50mg': '/images/products/ghk-cu-50mg.png',
+    'cjc-1295-no-dac-2mg': '/images/products/cjc-1295-no-dac-2mg.png',
+    'ipamorelin-2mg': '/images/products/ipamorelin-2mg.png',
+    'selank-5mg': '/images/products/selank-5mg.png',
+    'vitality-glo': '/images/products/vitality-glo.png',
+    'vitality-forge': '/images/products/vitality-forge.png',
+    'vitality-restore': '/images/products/vitality-restore.png',
+    'vitality-edge': '/images/products/vitality-edge.png',
+    'vitality-prime': '/images/products/vitality-prime.png',
+  }
+
   for (const product of allProducts) {
     const { categorySlug, ...productData } = product
     const category = categories.find((c) => c.slug === categorySlug)
-    await prisma.product.upsert({
+    const created = await prisma.product.upsert({
       where: { slug: product.slug },
       update: {},
       create: {
@@ -341,8 +356,24 @@ All compounds are lyophilized, third-party tested (≥98% purity), with CoA avai
         categoryId: category?.id,
       },
     })
+
+    // Attach product image if it exists and no image is already linked
+    const imgUrl = imageMap[product.slug]
+    if (imgUrl) {
+      const existing = await prisma.productImage.findFirst({ where: { productId: created.id } })
+      if (!existing) {
+        await prisma.productImage.create({
+          data: {
+            productId: created.id,
+            url: imgUrl,
+            alt: product.name,
+            position: 0,
+          },
+        })
+      }
+    }
   }
-  console.log(`✅ ${allProducts.length} products created (${products.length} individual + ${stacks.length} stacks)`)
+  console.log(`✅ ${allProducts.length} products created with images (${products.length} individual + ${stacks.length} stacks)`)
 
   // Sample discount code
   await prisma.discountCode.upsert({
