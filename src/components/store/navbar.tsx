@@ -37,13 +37,13 @@ export function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
-            <div className="glass-subtle px-6 py-2 rounded-2xl">
+            <div className="glass-subtle rounded-2xl overflow-hidden" style={{ width: 280, height: 56 }}>
               <Image
                 src="/logo.jpg"
                 alt="The Vitality Project"
-                width={600}
-                height={60}
-                className="h-10 w-[260px] object-contain"
+                width={560}
+                height={112}
+                className="w-full h-full object-fill"
                 priority
               />
             </div>
