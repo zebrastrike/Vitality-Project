@@ -116,74 +116,92 @@ export function VitalityVeins() {
       }
     }
 
-    // ── Active card heartbeat — radiates outward across entire screen ──
+    // ── Active card — CHARGE AND BLAST ──
+    // Card acts as an energy source. Charges up, then blasts a massive
+    // shockwave across the entire screen through the vein network.
     const card = activeCardRef.current
     if (card) {
       activeCardTimeRef.current += dt
       const ht = activeCardTimeRef.current
 
-      // Heartbeat: double-peak cardiac rhythm
-      const beat = Math.max(
-        Math.pow(Math.sin(ht * 3.5) * 0.5 + 0.5, 6),
-        Math.pow(Math.sin(ht * 3.5 + 0.7) * 0.5 + 0.5, 10)
-      )
-
       const cx = activeCardCenterRef.current.x
       const cy = activeCardCenterRef.current.y
 
-      // Expanding ring pulse — travels outward like a shockwave
-      const ringTime = (ht * 1.8) % 3.0 // ring repeats every ~1.7s
-      const ringRadius = ringTime * 400  // expands to 1200px
-      const ringWidth = 150              // width of the glowing ring
-      const ringStrength = beat * 0.8 * Math.max(0, 1 - ringTime / 3.0) // fades as it expands
+      // Heartbeat rhythm — controls blast timing
+      const beatCycle = 1.4 // seconds per beat
+      const beatPhase = (ht % beatCycle) / beatCycle // 0-1
 
-      if (ringStrength > 0.02) {
+      // Phase 0-0.3: CHARGE — energy gathers at the card
+      // Phase 0.3-1.0: BLAST — shockwave expands outward
+      const isCharging = beatPhase < 0.3
+      const blastPhase = isCharging ? 0 : (beatPhase - 0.3) / 0.7 // 0-1 during blast
+
+      if (isCharging) {
+        // Charge: bright glow builds at card center, pulls energy inward
+        const chargeStr = Math.pow(beatPhase / 0.3, 2) * 0.9
+        const chargeR = 250
+        const chargeR2 = chargeR * chargeR
+        for (let i = 0; i < nodeCount; i++) {
+          const ni = i * 4
+          const dx = nodes[ni] - cx
+          const dy = nodes[ni + 1] - cy
+          const d2 = dx * dx + dy * dy
+          if (d2 < chargeR2) {
+            const s = 1 - Math.sqrt(d2) / chargeR
+            nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * chargeStr * dt * 10)
+          }
+        }
+      } else {
+        // BLAST: expanding ring shockwave — massive, screen-filling
+        const maxRadius = Math.max(vw, vh) * 1.2 // covers entire screen
+        const ringRadius = blastPhase * maxRadius
+        const ringWidth = 200 + blastPhase * 100 // widens as it expands
+        const ringStrength = (1 - blastPhase * 0.6) * 0.95 // stays strong
+
         for (let i = 0; i < nodeCount; i++) {
           const ni = i * 4
           const dx = nodes[ni] - cx
           const dy = nodes[ni + 1] - cy
           const dist = Math.sqrt(dx * dx + dy * dy)
-
-          // Nodes near the expanding ring get lit up
           const ringDist = Math.abs(dist - ringRadius)
+
           if (ringDist < ringWidth) {
             const s = 1 - ringDist / ringWidth
-            nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * ringStrength * dt * 12)
+            nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * ringStrength * dt * 18)
           }
         }
-      }
 
-      // Also a steady glow at the card center
-      const steadyR = 200
-      const steadyR2 = steadyR * steadyR
-      const steadyStr = 0.15 + beat * 0.3
-      for (let i = 0; i < nodeCount; i++) {
-        const ni = i * 4
-        const dx = nodes[ni] - cx
-        const dy = nodes[ni + 1] - cy
-        const d2 = dx * dx + dy * dy
-        if (d2 < steadyR2) {
-          const s = 1 - Math.sqrt(d2) / steadyR
-          nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * steadyStr * dt * 6)
+        // Keep the card center glowing hot during blast
+        const coreR = 150
+        const coreR2 = coreR * coreR
+        for (let i = 0; i < nodeCount; i++) {
+          const ni = i * 4
+          const dx = nodes[ni] - cx
+          const dy = nodes[ni + 1] - cy
+          const d2 = dx * dx + dy * dy
+          if (d2 < coreR2) {
+            const s = 1 - Math.sqrt(d2) / coreR
+            nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * 0.5 * dt * 8)
+          }
         }
       }
     }
 
-    // ── Pulse diffusion (3 passes) ──
-    for (let pass = 0; pass < 3; pass++) {
+    // ── Pulse diffusion (4 passes — energy spreads fast) ──
+    for (let pass = 0; pass < 4; pass++) {
       for (let e = 0; e < edgeCount; e++) {
         const ei = e * 2
         const ai = edges[ei] * 4
         const bi = edges[ei + 1] * 4
-        const diff = (nodes[ai + 2] - nodes[bi + 2]) * 0.04
+        const diff = (nodes[ai + 2] - nodes[bi + 2]) * 0.045
         nodes[ai + 2] -= diff
         nodes[bi + 2] += diff
       }
     }
 
-    // Decay
+    // Decay — slow so energy lingers and travels far
     for (let i = 0; i < nodeCount; i++) {
-      nodes[i * 4 + 2] *= 0.955
+      nodes[i * 4 + 2] *= 0.945
     }
 
     // ── Draw edges ──
@@ -200,15 +218,15 @@ export function VitalityVeins() {
 
       const avgPulse = (nodes[ai + 2] + nodes[bi + 2]) * 0.5
       const baseA = (nodes[ai + 3] + nodes[bi + 3]) * 0.5 * breathe
-      const alpha = baseA + avgPulse * 0.55
+      const alpha = baseA + avgPulse * 0.7
 
       if (alpha < 0.005) continue
 
       ctx.beginPath()
       ctx.moveTo(ax, ay)
       ctx.lineTo(bx, by)
-      ctx.strokeStyle = `rgba(${R}, ${G}, ${B}, ${alpha})`
-      ctx.lineWidth = 0.2 + avgPulse * 0.5
+      ctx.strokeStyle = `rgba(${R}, ${G}, ${B}, ${Math.min(alpha, 0.6)})`
+      ctx.lineWidth = 0.2 + avgPulse * 0.8
       ctx.stroke()
     }
 
@@ -216,22 +234,25 @@ export function VitalityVeins() {
     for (let i = 0; i < nodeCount; i++) {
       const ni = i * 4
       const p = nodes[ni + 2]
-      if (p < 0.05) continue
+      if (p < 0.04) continue
 
       const x = nodes[ni], y = nodes[ni + 1]
       if (x < -10 || x > vw + 10 || y < -10 || y > vh + 10) continue
 
-      const r = 0.3 + p * 1.8
+      // Core dot
+      const r = 0.3 + p * 2.5
       ctx.beginPath()
       ctx.arc(x, y, r, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(${R}, ${G}, ${B}, ${Math.min(p * 0.7, 0.7)})`
+      ctx.fillStyle = `rgba(${R}, ${G}, ${B}, ${Math.min(p * 0.8, 0.85)})`
       ctx.fill()
 
-      if (p > 0.2) {
-        const gr = 3 + p * 10
+      // Synapse glow — bigger, more pronounced
+      if (p > 0.15) {
+        const gr = 4 + p * 18
         const grad = ctx.createRadialGradient(x, y, 0, x, y, gr)
-        grad.addColorStop(0, `rgba(${R}, ${G}, ${B}, ${p * 0.3})`)
-        grad.addColorStop(0.5, `rgba(${R}, ${G}, ${B}, ${p * 0.08})`)
+        grad.addColorStop(0, `rgba(${R}, ${G}, ${B}, ${p * 0.4})`)
+        grad.addColorStop(0.3, `rgba(${R}, ${G}, ${B}, ${p * 0.15})`)
+        grad.addColorStop(0.7, `rgba(${R}, ${G}, ${B}, ${p * 0.04})`)
         grad.addColorStop(1, `rgba(${R}, ${G}, ${B}, 0)`)
         ctx.beginPath()
         ctx.arc(x, y, gr, 0, Math.PI * 2)
