@@ -116,44 +116,66 @@ export function VitalityVeins() {
       }
     }
 
-    // ── Active card heartbeat ──
+    // ── Active card heartbeat — radiates outward across entire screen ──
     const card = activeCardRef.current
     if (card) {
       activeCardTimeRef.current += dt
       const ht = activeCardTimeRef.current
-      // Heartbeat: double-peak like a real heart
+
+      // Heartbeat: double-peak cardiac rhythm
       const beat = Math.max(
-        Math.pow(Math.sin(ht * 4.0) * 0.5 + 0.5, 8),          // first beat
-        Math.pow(Math.sin(ht * 4.0 + 0.8) * 0.5 + 0.5, 12)    // second beat (smaller)
+        Math.pow(Math.sin(ht * 3.5) * 0.5 + 0.5, 6),
+        Math.pow(Math.sin(ht * 3.5 + 0.7) * 0.5 + 0.5, 10)
       )
 
       const cx = activeCardCenterRef.current.x
       const cy = activeCardCenterRef.current.y
-      const pulseR = 300
-      const r2 = pulseR * pulseR
-      const strength = beat * 0.6
 
-      if (strength > 0.05) {
+      // Expanding ring pulse — travels outward like a shockwave
+      const ringTime = (ht * 1.8) % 3.0 // ring repeats every ~1.7s
+      const ringRadius = ringTime * 400  // expands to 1200px
+      const ringWidth = 150              // width of the glowing ring
+      const ringStrength = beat * 0.8 * Math.max(0, 1 - ringTime / 3.0) // fades as it expands
+
+      if (ringStrength > 0.02) {
         for (let i = 0; i < nodeCount; i++) {
           const ni = i * 4
           const dx = nodes[ni] - cx
           const dy = nodes[ni + 1] - cy
-          const d2 = dx * dx + dy * dy
-          if (d2 < r2) {
-            const s = 1 - Math.sqrt(d2) / pulseR
-            nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * strength * dt * 8)
+          const dist = Math.sqrt(dx * dx + dy * dy)
+
+          // Nodes near the expanding ring get lit up
+          const ringDist = Math.abs(dist - ringRadius)
+          if (ringDist < ringWidth) {
+            const s = 1 - ringDist / ringWidth
+            nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * ringStrength * dt * 12)
           }
+        }
+      }
+
+      // Also a steady glow at the card center
+      const steadyR = 200
+      const steadyR2 = steadyR * steadyR
+      const steadyStr = 0.15 + beat * 0.3
+      for (let i = 0; i < nodeCount; i++) {
+        const ni = i * 4
+        const dx = nodes[ni] - cx
+        const dy = nodes[ni + 1] - cy
+        const d2 = dx * dx + dy * dy
+        if (d2 < steadyR2) {
+          const s = 1 - Math.sqrt(d2) / steadyR
+          nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * steadyStr * dt * 6)
         }
       }
     }
 
-    // ── Pulse diffusion (3 passes for fast propagation) ──
+    // ── Pulse diffusion (3 passes) ──
     for (let pass = 0; pass < 3; pass++) {
       for (let e = 0; e < edgeCount; e++) {
         const ei = e * 2
         const ai = edges[ei] * 4
         const bi = edges[ei + 1] * 4
-        const diff = (nodes[ai + 2] - nodes[bi + 2]) * 0.035
+        const diff = (nodes[ai + 2] - nodes[bi + 2]) * 0.04
         nodes[ai + 2] -= diff
         nodes[bi + 2] += diff
       }
@@ -161,7 +183,7 @@ export function VitalityVeins() {
 
     // Decay
     for (let i = 0; i < nodeCount; i++) {
-      nodes[i * 4 + 2] *= 0.96
+      nodes[i * 4 + 2] *= 0.955
     }
 
     // ── Draw edges ──
@@ -325,7 +347,7 @@ export function VitalityVeins() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 1 }}
+      style={{ zIndex: 0 }}
       aria-hidden="true"
     />
   )
