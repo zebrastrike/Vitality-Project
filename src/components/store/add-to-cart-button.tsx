@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { useCart } from '@/hooks/useCart'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Check } from 'lucide-react'
+import { ShoppingCart, Check, LogIn } from 'lucide-react'
 
 interface Variant {
   id: string
@@ -25,6 +27,7 @@ interface Props {
 }
 
 export function AddToCartButton({ product }: Props) {
+  const { data: session } = useSession()
   const { addItem } = useCart()
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     product.variants.length === 1 ? product.variants[0] : null
@@ -49,6 +52,43 @@ export function AddToCartButton({ product }: Props) {
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
+  }
+
+  // If not authenticated, show sign-in button instead of add-to-cart
+  if (!session) {
+    return (
+      <div className="space-y-4">
+        {/* Still show variant selector so users can browse */}
+        {product.variants.length > 1 && (
+          <div>
+            <label className="text-sm font-medium text-white/70 mb-2 block">Select Option</label>
+            <div className="flex flex-wrap gap-2">
+              {product.variants.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedVariant(v)}
+                  disabled={v.inventory === 0}
+                  className={`px-4 py-2 rounded-xl text-sm border transition-all ${
+                    selectedVariant?.id === v.id
+                      ? 'border-brand-500 bg-brand-500/20 text-brand-400'
+                      : 'border-white/12 text-white/60 hover:border-white/30 disabled:opacity-30 disabled:cursor-not-allowed'
+                  }`}
+                >
+                  {v.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <Link href="/auth/login">
+          <Button size="lg" className="w-full">
+            <LogIn className="w-5 h-5" />
+            Sign In to Purchase
+          </Button>
+        </Link>
+      </div>
+    )
   }
 
   return (

@@ -2,13 +2,29 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, LogIn } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
+import { useSession } from 'next-auth/react'
 import { formatPrice } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
 export default function CartPage() {
+  const { data: session, status } = useSession()
   const { items, removeItem, updateQuantity, total, itemCount } = useCart()
+
+  // Show sign-in prompt if not authenticated
+  if (status !== 'loading' && !session) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+        <LogIn className="w-16 h-16 text-white/10 mx-auto mb-6" />
+        <h1 className="text-2xl font-bold mb-2">Sign in to view your cart</h1>
+        <p className="text-white/40 mb-8">You need an account to add items and checkout.</p>
+        <Link href="/auth/login">
+          <Button>Sign In</Button>
+        </Link>
+      </div>
+    )
+  }
 
   if (items.length === 0) {
     return (

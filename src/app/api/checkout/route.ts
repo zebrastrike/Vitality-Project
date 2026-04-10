@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateOrderNumber } from '@/lib/utils'
+import { processPayment, validateCard, type CardDetails } from '@/lib/payments'
 import { z } from 'zod'
 
 const checkoutSchema = z.object({
@@ -22,15 +23,31 @@ const checkoutSchema = z.object({
     country: z.string().default('US'),
   }),
   discountCode: z.string().optional(),
-  affiliateCode: z.string().optional(),
-  paymentMethod: z.enum(['zelle', 'wire']),
+  card: z.object({
+    number: z.string(),
+    expMonth: z.string(),
+    expYear: z.string(),
+    cvv: z.string(),
+    name: z.string(),
+    zip: z.string(),
+  }),
 })
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const body = await req.json()
     const data = checkoutSchema.parse(body)
+
+    // Validate card details
+    const cardError = validateCard(data.card as CardDetails)
+    if (cardError) {
+      return NextResponse.json({ error: cardError }, { status: 400 })
+    }
 
     // Fetch and validate products
     const productIds = data.items.map((i) => i.productId)
@@ -76,29 +93,34 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Resolve affiliate from cookie or request body
-    let affiliateId: string | undefined
-    const affCode = data.affiliateCode ?? req.cookies.get('aff_code')?.value
-    if (affCode) {
-      const affiliate = await prisma.affiliate.findUnique({
-        where: { code: affCode, status: 'ACTIVE' },
-      })
-      affiliateId = affiliate?.id
-    }
-
     const total = subtotal - discount
     const orderNumber = generateOrderNumber()
+
+    // Process payment
+    const paymentResult = await processPayment(
+      total,
+      data.card as CardDetails,
+      orderNumber,
+      { email: data.email, userId: session.user.id }
+    )
+
+    if (!paymentResult.success) {
+      return NextResponse.json(
+        { error: paymentResult.error ?? 'Payment failed. Please check your card details and try again.' },
+        { status: 402 }
+      )
+    }
 
     // Create shipping address
     const shippingAddress = await prisma.address.findFirst({
       where: {
-        userId: session?.user?.id ?? '',
+        userId: session.user.id,
         line1: data.shippingAddress.line1,
         zip: data.shippingAddress.zip,
       },
     }) ?? await prisma.address.create({
       data: {
-        userId: session?.user?.id ?? 'guest',
+        userId: session.user.id,
         name: data.shippingAddress.name,
         line1: data.shippingAddress.line1,
         line2: data.shippingAddress.line2,
@@ -109,11 +131,11 @@ export async function POST(req: NextRequest) {
       },
     }).catch(() => null)
 
-    // Create order — status PENDING until admin confirms payment
+    // Create order — PAID since payment succeeded
     const order = await prisma.order.create({
       data: {
         orderNumber,
-        userId: session?.user?.id,
+        userId: session.user.id,
         email: data.email,
         subtotal,
         discount,
@@ -121,11 +143,10 @@ export async function POST(req: NextRequest) {
         tax: 0,
         total,
         discountCode: data.discountCode,
-        affiliateCode: affCode,
-        affiliateId,
-        paymentMethod: data.paymentMethod,
-        paymentStatus: 'UNPAID',
-        status: 'PENDING',
+        paymentMethod: 'card',
+        paymentStatus: 'PAID',
+        paymentId: paymentResult.transactionId,
+        status: 'PROCESSING',
         shippingAddressId: shippingAddress?.id,
         items: { create: orderItems },
       },

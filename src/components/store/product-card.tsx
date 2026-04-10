@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, LogIn } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { useCart } from '@/hooks/useCart'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import type { ProductWithImages } from '@/types'
 
@@ -13,6 +14,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { data: session } = useSession()
   const { addItem } = useCart()
   const image = product.images?.[0]
   const discountPct = product.comparePrice
@@ -21,6 +23,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
+    if (!session) return // should not happen since button is hidden, but guard
     addItem({
       productId: product.id,
       name: product.name,
@@ -29,6 +32,11 @@ export function ProductCard({ product }: ProductCardProps) {
       quantity: 1,
       slug: product.slug,
     })
+  }
+
+  const handleSignInClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    window.location.href = '/auth/login'
   }
 
   return (
@@ -76,15 +84,29 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="text-sm text-white/40 line-through">{formatPrice(product.comparePrice)}</span>
               )}
             </div>
-            <Button
-              size="sm"
-              onClick={handleAddToCart}
-              disabled={product.inventory === 0}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-            </Button>
+            {session ? (
+              <Button
+                size="sm"
+                onClick={handleAddToCart}
+                disabled={product.inventory === 0}
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSignInClick}
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
+          {!session && (
+            <p className="text-[10px] text-white/30 mt-1">Sign in to buy</p>
+          )}
         </div>
       </div>
     </Link>

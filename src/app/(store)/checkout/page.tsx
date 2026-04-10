@@ -3,42 +3,97 @@
 import { useState } from 'react'
 import { useCart } from '@/hooks/useCart'
 import { formatPrice } from '@/lib/utils'
+import { formatCardNumber, validateCard } from '@/lib/payments'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Lock, Smartphone, Building2 } from 'lucide-react'
+import { Lock, CreditCard, AlertCircle, LogIn } from 'lucide-react'
+import Link from 'next/link'
 
 interface Address {
   name: string; line1: string; line2: string; city: string; state: string; zip: string; country: string
 }
 
-const paymentOptions = [
-  { key: 'zelle', label: 'Zelle', desc: 'Instant payment', icon: Smartphone },
-  { key: 'wire', label: 'Wire Transfer', desc: 'Bank to bank', icon: Building2 },
-] as const
-
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [ruoAgreed, setRuoAgreed] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'wire'>('zelle')
   const [discountCode, setDiscountCode] = useState('')
   const [email, setEmail] = useState(session?.user?.email ?? '')
+
+  // Card details
+  const [cardNumber, setCardNumber] = useState('')
+  const [expMonth, setExpMonth] = useState('')
+  const [expYear, setExpYear] = useState('')
+  const [cvv, setCvv] = useState('')
+  const [cardName, setCardName] = useState(session?.user?.name ?? '')
+  const [cardZip, setCardZip] = useState('')
+
   const [address, setAddress] = useState<Address>({
     name: session?.user?.name ?? '',
     line1: '', line2: '', city: '', state: '', zip: '', country: 'US',
   })
+
+  // Auth gate
+  if (status !== 'loading' && !session) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+        <LogIn className="w-16 h-16 text-white/10 mx-auto mb-6" />
+        <h1 className="text-2xl font-bold mb-2">Sign in to checkout</h1>
+        <p className="text-white/40 mb-8">You need an account to complete your purchase.</p>
+        <Link href="/auth/login">
+          <Button>Sign In</Button>
+        </Link>
+      </div>
+    )
+  }
 
   if (items.length === 0) {
     router.push('/cart')
     return null
   }
 
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 16)
+    setCardNumber(formatCardNumber(raw))
+  }
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 4)
+    if (raw.length >= 2) {
+      setExpMonth(raw.slice(0, 2))
+      setExpYear(raw.slice(2))
+    } else {
+      setExpMonth(raw)
+      setExpYear('')
+    }
+  }
+
+  const expiryDisplay = expMonth + (expYear || expMonth.length >= 2 ? '/' : '') + expYear
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+
+    // Validate card
+    const card = {
+      number: cardNumber.replace(/\s/g, ''),
+      expMonth,
+      expYear: expYear.length === 2 ? `20${expYear}` : expYear,
+      cvv,
+      name: cardName,
+      zip: cardZip,
+    }
+    const cardError = validateCard(card)
+    if (cardError) {
+      setError(cardError)
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/checkout', {
@@ -49,17 +104,16 @@ export default function CheckoutPage() {
           email,
           shippingAddress: address,
           discountCode: discountCode || undefined,
-          affiliateCode: typeof window !== 'undefined' ? (document.cookie.match(/aff_code=([^;]+)/)?.[1]) : undefined,
-          paymentMethod,
+          card,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
       clearCart()
-      router.push(`/checkout/confirmation?order=${data.orderNumber}&method=${paymentMethod}`)
+      router.push(`/checkout/confirmation?order=${data.orderNumber}`)
     } catch (err) {
-      alert('Something went wrong. Please try again.')
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -71,6 +125,13 @@ export default function CheckoutPage() {
         <Lock className="w-5 h-5 text-brand-400" />
         <h1 className="text-2xl font-bold">Secure Checkout</h1>
       </div>
+
+      {error && (
+        <div className="glass rounded-2xl p-4 mb-6 border border-red-500/30 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
@@ -108,33 +169,58 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Payment method */}
+          {/* Payment — Credit Card */}
           <div className="glass rounded-2xl p-6">
-            <h2 className="font-semibold mb-4">Payment Method</h2>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {paymentOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => setPaymentMethod(opt.key)}
-                  className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${
-                    paymentMethod === opt.key
-                      ? 'border-brand-500 bg-brand-500/10'
-                      : 'border-white/12 hover:border-white/15'
-                  }`}
-                >
-                  <opt.icon className="w-6 h-6 text-brand-400" />
-                  <div>
-                    <p className="text-sm font-medium">{opt.label}</p>
-                    <p className="text-xs text-white/40">{opt.desc}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="flex items-center gap-3 mb-4">
+              <CreditCard className="w-5 h-5 text-brand-400" />
+              <h2 className="font-semibold">Payment</h2>
             </div>
-            <div className="glass rounded-xl p-4 text-sm text-white/50">
-              {paymentMethod === 'zelle'
-                ? 'After placing your order, you\'ll receive Zelle payment details. Include your order number in the memo.'
-                : 'After placing your order, wire transfer details will be emailed to you. Use your order number as the reference.'}
+            <div className="space-y-4">
+              <Input
+                label="Card Number"
+                required
+                value={cardNumber}
+                onChange={handleCardNumberChange}
+                placeholder="1234 5678 9012 3456"
+                inputMode="numeric"
+                maxLength={19}
+              />
+              <div className="grid grid-cols-3 gap-4">
+                <Input
+                  label="Expiry (MM/YY)"
+                  required
+                  value={expiryDisplay}
+                  onChange={handleExpiryChange}
+                  placeholder="MM/YY"
+                  inputMode="numeric"
+                  maxLength={5}
+                />
+                <Input
+                  label="CVV"
+                  required
+                  value={cvv}
+                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="123"
+                  inputMode="numeric"
+                  maxLength={4}
+                  type="password"
+                />
+                <Input
+                  label="ZIP Code"
+                  required
+                  value={cardZip}
+                  onChange={(e) => setCardZip(e.target.value.slice(0, 10))}
+                  placeholder="10001"
+                  inputMode="numeric"
+                />
+              </div>
+              <Input
+                label="Cardholder Name"
+                required
+                value={cardName}
+                onChange={(e) => setCardName(e.target.value)}
+                placeholder="Name on card"
+              />
             </div>
           </div>
         </div>
@@ -145,7 +231,7 @@ export default function CheckoutPage() {
           <div className="space-y-3 mb-4">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-white/60 truncate mr-2">{item.name} × {item.quantity}</span>
+                <span className="text-white/60 truncate mr-2">{item.name} x {item.quantity}</span>
                 <span className="shrink-0">{formatPrice(item.price * item.quantity)}</span>
               </div>
             ))}
@@ -184,10 +270,10 @@ export default function CheckoutPage() {
 
           <Button type="submit" size="lg" loading={loading} disabled={!ruoAgreed} className="w-full">
             <Lock className="w-4 h-4" />
-            Place Order
+            Pay {formatPrice(total)}
           </Button>
           <p className="text-xs text-white/30 text-center mt-3">
-            Payment instructions provided after order confirmation.
+            Your card will be charged securely.
           </p>
         </div>
       </form>
