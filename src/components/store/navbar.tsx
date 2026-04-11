@@ -96,6 +96,13 @@ export function Navbar() {
             </div>
 
             <Link
+              href="/membership"
+              className="text-sm text-brand-300 hover:text-brand-200 transition-colors font-medium"
+            >
+              Membership
+            </Link>
+
+            <Link
               href="/blog"
               className="text-sm text-white/60 hover:text-white transition-colors"
             >
@@ -186,6 +193,13 @@ export function Navbar() {
             </Link>
           ))}
           <div className="border-t border-white/10 pt-2 mt-2" />
+          <Link
+            href="/membership"
+            onClick={() => setMobileOpen(false)}
+            className="block px-3 py-2 text-brand-300 font-medium hover:text-brand-200 transition-colors rounded-lg hover:bg-white/5"
+          >
+            Membership
+          </Link>
           <Link
             href="/blog"
             onClick={() => setMobileOpen(false)}

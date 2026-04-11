@@ -442,3 +442,16 @@ model SiteSetting {
 
   @@map("site_settings")
 }
+
+// ─── Membership Pre-Signups ──────────────────────────────────────────────────
+
+model MembershipSignup {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  plan      String   @default("monthly") // monthly, quarterly, annual
+  source    String?  // where they signed up from (hero, product, nav, etc)
+  createdAt DateTime @default(now())
+
+  @@map("membership_signups")
+}

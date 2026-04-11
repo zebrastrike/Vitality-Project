@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Shield, Zap, Lock, Package, FlaskConical, Dna, Brain, Sparkles } from 'lucide-react'
+import { ArrowRight, Shield, Zap, Lock, Package, FlaskConical, Dna, Brain, Sparkles, Star } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/store/product-card'
 
@@ -59,18 +59,22 @@ export default async function HomePage() {
               Elevate Your{' '}
               <span className="text-gradient">Vitality</span>
             </h1>
-            <p className="text-lg text-white/70 mb-8 leading-relaxed max-w-lg">
+            <p className="text-lg text-white/70 mb-4 leading-relaxed max-w-lg">
               Research-grade peptides. Lab-verified purity. Private infrastructure. Built for people who take their biology seriously.
             </p>
+            <p className="text-sm text-brand-300/80 mb-8">
+              Launching soon — members get first access + exclusive pricing.
+            </p>
             <div className="flex flex-wrap gap-3">
-              <Link href="/products">
+              <Link href="/membership">
                 <Button size="lg">
-                  Shop Products <ArrowRight className="w-5 h-5" />
+                  <Sparkles className="w-5 h-5" />
+                  Join The Membership
                 </Button>
               </Link>
-              <Link href="/what-are-peptides">
+              <Link href="/products">
                 <Button size="lg" variant="secondary">
-                  The Science
+                  Browse Catalog
                 </Button>
               </Link>
             </div>
@@ -212,17 +216,22 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────────── */}
+      {/* ── MEMBERSHIP CTA ─────────────────────────────────────────── */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="glass p-12 sm:p-16 rounded-3xl text-center">
-            <h2 className="text-4xl font-bold mb-4">Ready to Optimize?</h2>
-            <p className="text-white/50 mb-8 max-w-md mx-auto leading-relaxed">
-              Explore our catalog or join the affiliate program to earn while you share what works.
+            <Sparkles className="w-10 h-10 text-brand-400 mx-auto mb-4" />
+            <h2 className="text-4xl font-bold mb-4">Vitalize Your Project</h2>
+            <p className="text-white/50 mb-3 max-w-md mx-auto leading-relaxed">
+              Pay less. Get more. Every month. Members get early access, exclusive pricing, and compounds you won't find anywhere else.
             </p>
+            <p className="text-sm text-brand-300/60 mb-8">No payment today — just reserve your spot.</p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/products">
-                <Button size="lg">Shop Now</Button>
+              <Link href="/membership">
+                <Button size="lg">
+                  <Sparkles className="w-5 h-5" />
+                  Join The Membership
+                </Button>
               </Link>
               <Link href="/affiliate">
                 <Button size="lg" variant="outline">Become an Affiliate</Button>

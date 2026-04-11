@@ -2,10 +2,8 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart, LogIn } from 'lucide-react'
+import { Clock, Sparkles } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { useCart } from '@/hooks/useCart'
-import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import type { ProductWithImages } from '@/types'
 
@@ -14,30 +12,10 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { data: session } = useSession()
-  const { addItem } = useCart()
   const image = product.images?.[0]
   const discountPct = product.comparePrice
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : null
-
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    if (!session) return // should not happen since button is hidden, but guard
-    addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      image: image?.url,
-      quantity: 1,
-      slug: product.slug,
-    })
-  }
-
-  const handleSignInClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    window.location.href = '/auth/login'
-  }
 
   return (
     <Link href={`/products/${product.slug}`}>
@@ -61,11 +39,13 @@ export function ProductCard({ product }: ProductCardProps) {
               -{discountPct}%
             </div>
           )}
-          {product.inventory === 0 && (
-            <div className="absolute inset-0 bg-dark-900/80 flex items-center justify-center">
-              <span className="text-white/60 text-sm font-medium">Out of Stock</span>
-            </div>
-          )}
+
+          {/* COMING SOON overlay */}
+          <div className="absolute inset-0 bg-dark-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <Clock className="w-6 h-6 text-brand-300 mb-2" />
+            <span className="text-white font-semibold text-sm">Coming Soon</span>
+            <span className="text-white/50 text-xs mt-1">Join the membership</span>
+          </div>
         </div>
 
         {/* Info */}
@@ -84,29 +64,16 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="text-sm text-white/40 line-through">{formatPrice(product.comparePrice)}</span>
               )}
             </div>
-            {session ? (
-              <Button
-                size="sm"
-                onClick={handleAddToCart}
-                disabled={product.inventory === 0}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <ShoppingCart className="w-3.5 h-3.5" />
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSignInClick}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => { e.preventDefault(); window.location.href = '/membership' }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </Button>
           </div>
-          {!session && (
-            <p className="text-[10px] text-white/30 mt-1">Sign in to buy</p>
-          )}
+          <p className="text-[10px] text-brand-300/60 mt-1">Members get early access + discounts</p>
         </div>
       </div>
     </Link>
