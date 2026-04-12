@@ -7,7 +7,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <Image src="/logo.jpg" alt="The Vitality Project" width={240} height={90} className="h-14 w-auto object-contain mb-3" />
+            <Image src="/logo-white.png" alt="The Vitality Project" width={160} height={160} className="h-12 w-auto object-contain mb-3" />
             <p className="text-white/40 text-sm max-w-xs">
               Premium quality research compounds sourced and fulfilled with complete data privacy.
             </p>
