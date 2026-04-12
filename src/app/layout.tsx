@@ -18,6 +18,12 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'The Vitality Project',
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Vitality',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
