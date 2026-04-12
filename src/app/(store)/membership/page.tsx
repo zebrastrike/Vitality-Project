@@ -126,14 +126,25 @@ export default function MembershipPage() {
       <div className="text-center mb-16">
         <div className="inline-flex items-center gap-2 glass-subtle rounded-full px-4 py-1.5 text-sm text-brand-300 mb-6">
           <Sparkles className="w-3.5 h-3.5" />
-          Pre-Launch Membership
+          Membership — Coming Soon
         </div>
         <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">
           Vitalize Your <span className="text-gradient">Project</span>
         </h1>
-        <p className="text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
-          Pay less. Get more. Every month. Lock in your membership now and be first in line when the shop opens.
+        <p className="text-xl text-white/50 max-w-2xl mx-auto leading-relaxed mb-6">
+          Pay less. Get more. Every month. Members unlock exclusive discounts, priority access to new products, and benefits you won't find anywhere else.
         </p>
+        <div className="glass-subtle rounded-2xl p-5 max-w-xl mx-auto">
+          <h3 className="font-semibold text-white mb-3 text-sm uppercase tracking-wider">What's included</h3>
+          <div className="grid grid-cols-2 gap-3 text-sm text-white/60">
+            <div className="flex items-center gap-2"><Check className="w-4 h-4 text-brand-400 shrink-0" /> Up to 25% off every order</div>
+            <div className="flex items-center gap-2"><Check className="w-4 h-4 text-brand-400 shrink-0" /> Free shipping on all orders</div>
+            <div className="flex items-center gap-2"><Check className="w-4 h-4 text-brand-400 shrink-0" /> Member-only products</div>
+            <div className="flex items-center gap-2"><Check className="w-4 h-4 text-brand-400 shrink-0" /> Early access to new drops</div>
+            <div className="flex items-center gap-2"><Check className="w-4 h-4 text-brand-400 shrink-0" /> Exclusive stacks & bundles</div>
+            <div className="flex items-center gap-2"><Check className="w-4 h-4 text-brand-400 shrink-0" /> Priority customer support</div>
+          </div>
+        </div>
       </div>
 
       {/* Plans */}
@@ -186,9 +197,9 @@ export default function MembershipPage() {
       {/* Signup Form */}
       <div className="max-w-lg mx-auto mb-20">
         <div className="glass rounded-3xl p-8">
-          <h2 className="text-2xl font-bold text-center mb-2">Lock In Your Spot</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">Get On The List</h2>
           <p className="text-center text-white/40 text-sm mb-6">
-            No charge today. We'll notify you the moment the shop opens.
+            Memberships are launching soon. Reserve your spot — no payment today. We'll notify you the moment it goes live.
           </p>
 
           {error && (
@@ -241,9 +252,9 @@ export default function MembershipPage() {
 
       {/* Bottom CTA */}
       <div className="glass rounded-3xl p-10 text-center">
-        <h2 className="text-2xl font-bold mb-3">The shop opens soon.</h2>
+        <h2 className="text-2xl font-bold mb-3">Memberships are launching soon.</h2>
         <p className="text-white/40 mb-6 max-w-md mx-auto">
-          Members go first. Everyone else waits.
+          Discounts. Products. Priority access. Members go first. Everyone else waits.
         </p>
         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <Button size="lg">
