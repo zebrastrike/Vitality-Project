@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { formatPrice } from '@/lib/utils'
 import { ShoppingBag, Users, DollarSign, TrendingUp, Package, AlertCircle } from 'lucide-react'
+import { InstallAppButton } from '@/components/admin/install-app-button'
 
 async function getDashboardStats() {
   const [
@@ -49,9 +50,14 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-white/40 mt-1">Overview of The Vitality Project</p>
+      <div className="flex items-start justify-between gap-6 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-white/40 mt-1">Overview of The Vitality Project</p>
+        </div>
+        <div className="w-80 shrink-0">
+          <InstallAppButton />
+        </div>
       </div>
 
       {/* Stat cards */}

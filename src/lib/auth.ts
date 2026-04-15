@@ -3,12 +3,31 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
 
+const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN
+const isSecure = (process.env.NEXTAUTH_URL || '').startsWith('https://')
+const sessionCookieName = `${isSecure ? '__Secure-' : ''}next-auth.session-token`
+
 export const authOptions: NextAuthOptions = {
+  useSecureCookies: isSecure,
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/auth/login',
     error: '/auth/error',
   },
+  cookies: cookieDomain
+    ? {
+        sessionToken: {
+          name: sessionCookieName,
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            secure: isSecure,
+            domain: cookieDomain,
+          },
+        },
+      }
+    : undefined,
   providers: [
     CredentialsProvider({
       name: 'credentials',

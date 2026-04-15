@@ -28,6 +28,8 @@ model User {
   sessions      Session[]
   accounts      Account[]
   cartItems     CartItem[]
+  orgMemberships OrgMember[]
+  orgClients     OrgClient[]
 
   @@map("users")
 }
@@ -36,6 +38,161 @@ enum UserRole {
   CUSTOMER
   AFFILIATE
   ADMIN
+}
+
+// ─── Organizations & Tenancy ────────────────────────────────────────────────
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  type      OrgType
+  status    OrgStatus @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  locations     Location[]
+  members       OrgMember[]
+  clients       OrgClient[]
+  pricingPlans  PricingPlan[]
+  orders        Order[]
+
+  @@map("organizations")
+}
+
+model Location {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  zip            String?
+  phone          String?
+  commissionRate Float    @default(0.10)
+  pricingPlanId  String?
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pricingPlan    PricingPlan? @relation(fields: [pricingPlanId], references: [id])
+  devices        LocationDevice[]
+  orders         Order[]
+  clients        OrgClient[]
+  members        OrgMember[]
+  commissions    OrderCommission[]
+
+  @@unique([organizationId, slug])
+  @@map("locations")
+}
+
+model OrgMember {
+  id             String         @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrgMemberRole
+  locationId     String?
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location       Location?    @relation(fields: [locationId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@map("org_members")
+}
+
+model OrgClient {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  locationId     String?
+  status         ClientStatus @default(ACTIVE)
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location       Location?    @relation(fields: [locationId], references: [id])
+  orders         Order[]
+
+  @@unique([organizationId, userId])
+  @@map("org_clients")
+}
+
+model LocationDevice {
+  id         String   @id @default(cuid())
+  locationId String
+  name       String
+  apiKey     String   @unique
+  lastSeenAt DateTime?
+
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@map("location_devices")
+}
+
+model PricingPlan {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  baseDiscountPct Float?
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  overrides      ProductPriceOverride[]
+  locations      Location[]
+
+  @@unique([organizationId, name])
+  @@map("pricing_plans")
+}
+
+model ProductPriceOverride {
+  id            String   @id @default(cuid())
+  pricingPlanId String
+  productId     String
+  price         Int
+
+  pricingPlan   PricingPlan @relation(fields: [pricingPlanId], references: [id], onDelete: Cascade)
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([pricingPlanId, productId])
+  @@map("product_price_overrides")
+}
+
+model OrderCommission {
+  id          String            @id @default(cuid())
+  orderId     String
+  locationId  String
+  amount      Int
+  status      CommissionStatus @default(PENDING)
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, locationId])
+  @@map("order_commissions")
+}
+
+enum OrgType {
+  GYM
+  CLINIC
+  DOCTOR_OFFICE
+  OTHER
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrgMemberRole {
+  OWNER
+  ADMIN
+  STAFF
+  COACH
+  DOCTOR
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
 }
 
 model Account {
@@ -120,6 +277,7 @@ model Product {
   orderItems    OrderItem[]
   cartItems     CartItem[]
   reviews       Review[]
+  priceOverrides ProductPriceOverride[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -198,10 +356,22 @@ model Order {
   trackingUrl     String?
   affiliateCode   String?
   affiliateId     String?
+  organizationId String?
+  locationId     String?
+  clientId       String?
+  salesChannel   OrderChannel @default(DIRECT)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  location       Location?     @relation(fields: [locationId], references: [id])
+  client         OrgClient?    @relation(fields: [clientId], references: [id])
+  commissions    OrderCommission[]
+
   @@map("orders")
+  @@index([organizationId])
+  @@index([locationId])
+  @@index([clientId])
 }
 
 enum OrderStatus {
@@ -219,6 +389,13 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
   REFUNDED
   FAILED
+}
+
+enum OrderChannel {
+  DIRECT
+  LOCATION_KIOSK
+  CLIENT_PORTAL
+  ADMIN
 }
 
 model OrderItem {
