@@ -4,33 +4,35 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
-  Settings, Tag, Truck, Link2, MessageSquare, LogOut, Building2,
+  LayoutDashboard, MapPin, Users, DollarSign,
+  Settings, LogOut, Building2,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/products', label: 'Products', icon: Package },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
-  { href: '/admin/customers', label: 'Customers', icon: Users },
-  { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
-  { href: '/admin/affiliates', label: 'Affiliates', icon: Link2 },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
-  { href: '/admin/discounts', label: 'Discounts', icon: Tag },
-  { href: '/admin/shipping', label: 'Shipping', icon: Truck },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/business', label: 'Overview', icon: LayoutDashboard, exact: true },
+  { href: '/business/locations', label: 'Locations', icon: MapPin },
+  { href: '/business/staff', label: 'Staff', icon: Users },
+  { href: '/business/commissions', label: 'Commissions', icon: DollarSign },
+  { href: '/business/settings', label: 'Settings', icon: Settings },
 ]
 
-export function AdminSidebar() {
+interface BusinessSidebarProps {
+  orgName: string
+}
+
+export function BusinessSidebar({ orgName }: BusinessSidebarProps) {
   const pathname = usePathname()
 
   return (
     <aside className="w-60 shrink-0 border-r border-white/5 bg-dark-800 flex flex-col min-h-screen">
       {/* Logo */}
       <div className="p-6 border-b border-white/5">
-        <div className="text-sm font-bold uppercase tracking-widest text-white/40 mb-0.5">Admin</div>
-        <div className="font-bold text-gradient">VITALITY PROJECT</div>
+        <div className="flex items-center gap-2 mb-1">
+          <Building2 className="w-4 h-4 text-brand-400" />
+          <div className="text-sm font-bold uppercase tracking-widest text-white/40">Business</div>
+        </div>
+        <div className="font-bold text-gradient truncate">{orgName}</div>
       </div>
 
       {/* Nav */}
