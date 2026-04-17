@@ -14,16 +14,20 @@ import {
   LogOut,
   Menu,
   X,
+  Sparkles,
+  MessageSquare,
 } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
   { href: '/account', label: 'Overview', icon: LayoutDashboard, exact: true },
   { href: '/account/orders', label: 'Orders', icon: Package },
+  { href: '/account/credits', label: 'Credits & Rewards', icon: Sparkles },
   { href: '/account/addresses', label: 'Addresses', icon: MapPin },
   { href: '/account/settings', label: 'Settings', icon: Settings },
   { href: '/account/affiliate', label: 'Affiliate', icon: Users },
   { href: '/account/wishlist', label: 'Wishlist', icon: Heart },
+  { href: '/account/support', label: 'Support', icon: MessageSquare },
 ]
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {

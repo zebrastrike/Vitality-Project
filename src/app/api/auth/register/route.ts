@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import { z } from 'zod'
+import { sendEmail } from '@/lib/email'
+import { welcomeEmail, emailVerification } from '@/lib/email-templates'
 
 const schema = z.object({
   name: z.string().min(2).max(100),
@@ -20,9 +23,42 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
+    const verifyToken = randomBytes(32).toString('hex')
+
     const user = await prisma.user.create({
-      data: { name, email: email.toLowerCase(), passwordHash },
+      data: {
+        name,
+        email: email.toLowerCase(),
+        passwordHash,
+        verifyToken,
+      },
     })
+
+    // Fire-and-forget — never block the signup flow on email delivery
+    void (async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
+        const verifyUrl = `${baseUrl}/api/account/verify-email?token=${verifyToken}`
+
+        const welcome = welcomeEmail({ name })
+        await sendEmail({
+          to: user.email,
+          subject: welcome.subject,
+          html: welcome.html,
+          text: welcome.text,
+        })
+
+        const verify = emailVerification({ name, verifyUrl })
+        await sendEmail({
+          to: user.email,
+          subject: verify.subject,
+          html: verify.html,
+          text: verify.text,
+        })
+      } catch (err) {
+        console.error('Registration email send failed:', err)
+      }
+    })()
 
     return NextResponse.json({ id: user.id, email: user.email }, { status: 201 })
   } catch (error) {

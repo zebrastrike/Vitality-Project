@@ -11,6 +11,7 @@ interface Props {
     id: string
     status: string
     paymentStatus: string
+    total?: number
     trackingNumber?: string | null
     trackingUrl?: string | null
     notes?: string | null
@@ -31,6 +32,38 @@ export function OrderActions({ order }: Props) {
   const [tracking, setTracking] = useState(order.trackingNumber ?? '')
   const [trackingUrl, setTrackingUrl] = useState(order.trackingUrl ?? '')
   const [notes, setNotes] = useState(order.notes ?? '')
+  const [refundAmount, setRefundAmount] = useState(
+    order.total ? ((order.total) / 100).toFixed(2) : ''
+  )
+  const [refundReason, setRefundReason] = useState('')
+  const [refundMethod, setRefundMethod] = useState<'original' | 'store_credit'>('original')
+  const [refundMsg, setRefundMsg] = useState<string | null>(null)
+  const [refundErr, setRefundErr] = useState<string | null>(null)
+
+  const issueRefund = async () => {
+    setLoading(true)
+    setRefundErr(null)
+    setRefundMsg(null)
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Math.round(parseFloat(refundAmount) * 100),
+          reason: refundReason,
+          refundMethod,
+        }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error ?? 'Refund failed')
+      setRefundMsg(`Refund of $${refundAmount} issued.`)
+      router.refresh()
+    } catch (err) {
+      setRefundErr(err instanceof Error ? err.message : 'Refund failed')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const update = async (data: Record<string, unknown>) => {
     setLoading(true)
@@ -122,6 +155,70 @@ export function OrderActions({ order }: Props) {
           Save Notes
         </Button>
       </div>
+
+      {/* Refund */}
+      {order.paymentStatus === 'PAID' && (
+        <div className="border border-amber-500/20 rounded-xl p-4 bg-amber-500/5 space-y-3">
+          <p className="text-sm font-medium text-amber-400 flex items-center gap-2">
+            <RotateCcw className="w-4 h-4" /> Issue Refund
+          </p>
+          <Input
+            label="Amount (USD)"
+            type="number"
+            step="0.01"
+            value={refundAmount}
+            onChange={(e) => setRefundAmount(e.target.value)}
+          />
+          <div>
+            <p className="text-sm text-white/60 mb-2">Refund to</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setRefundMethod('original')}
+                className={`flex-1 px-3 py-2 rounded-xl text-sm border transition-colors ${
+                  refundMethod === 'original'
+                    ? 'border-brand-500 bg-brand-500/10 text-brand-400'
+                    : 'border-white/10 text-white/50 hover:text-white'
+                }`}
+              >
+                Original Payment
+              </button>
+              <button
+                type="button"
+                onClick={() => setRefundMethod('store_credit')}
+                className={`flex-1 px-3 py-2 rounded-xl text-sm border transition-colors ${
+                  refundMethod === 'store_credit'
+                    ? 'border-brand-500 bg-brand-500/10 text-brand-400'
+                    : 'border-white/10 text-white/50 hover:text-white'
+                }`}
+              >
+                Store Credit
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-white/70 mb-1.5 block">Reason</label>
+            <textarea
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              rows={2}
+              placeholder="Why is this refund being issued..."
+              className="w-full px-4 py-2.5 rounded-xl bg-dark-700 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+            />
+          </div>
+          {refundErr && <p className="text-sm text-red-400">{refundErr}</p>}
+          {refundMsg && <p className="text-sm text-emerald-400">{refundMsg}</p>}
+          <Button
+            size="sm"
+            onClick={issueRefund}
+            loading={loading}
+            disabled={loading || !refundAmount || !refundReason}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            Process Refund
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

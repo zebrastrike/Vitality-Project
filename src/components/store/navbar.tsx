@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react'
+import { ShoppingCart, User, Menu, X, ChevronDown, Search } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
 import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { SearchBar } from '@/components/store/search-bar'
 
 const shopCategories = [
   { href: '/products', label: 'All Products' },
@@ -29,6 +30,7 @@ export function Navbar() {
   const { itemCount } = useCart()
   const { data: session } = useSession()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   return (
     <nav className="fixed top-0 w-full z-50 glass-elevated border-b border-white/10">
@@ -117,6 +119,15 @@ export function Navbar() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
+            {/* Search */}
+            <button
+              onClick={() => setSearchOpen((v) => !v)}
+              className="p-2 text-white/60 hover:text-white transition-colors"
+              aria-label="Search"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+
             {/* Cart */}
             <Link href="/cart" className="relative p-2 text-white/60 hover:text-white transition-colors">
               <ShoppingCart className="w-5 h-5" />
@@ -163,6 +174,15 @@ export function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Search drawer */}
+      {searchOpen && (
+        <div className="border-t border-white/10 bg-dark-900/70 backdrop-blur px-4 py-3">
+          <div className="max-w-2xl mx-auto">
+            <SearchBar autoFocus variant="full" onClose={() => setSearchOpen(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Mobile nav */}
       {mobileOpen && (

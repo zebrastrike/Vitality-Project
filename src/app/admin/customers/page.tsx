@@ -1,24 +1,154 @@
 import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
+import { Download } from 'lucide-react'
+import type { Prisma } from '@prisma/client'
 
-export default async function AdminCustomersPage() {
-  const customers = await prisma.user.findMany({
+const DAY = 24 * 60 * 60 * 1000
+
+type Segment = 'all' | 'new' | 'vip' | 'at-risk' | 'affiliates'
+
+interface Props {
+  searchParams: Promise<{ segment?: string }>
+}
+
+function parseSegment(raw?: string): Segment {
+  switch (raw) {
+    case 'new':
+    case 'vip':
+    case 'at-risk':
+    case 'affiliates':
+      return raw
+    default:
+      return 'all'
+  }
+}
+
+export default async function AdminCustomersPage({ searchParams }: Props) {
+  const sp = await searchParams
+  const segment = parseSegment(sp?.segment)
+
+  const now = new Date()
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY)
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * DAY)
+
+  let where: Prisma.UserWhereInput = {
+    role: { in: ['CUSTOMER', 'AFFILIATE'] },
+  }
+
+  if (segment === 'new') {
+    where = { ...where, createdAt: { gte: thirtyDaysAgo } }
+  } else if (segment === 'affiliates') {
+    where = { role: 'AFFILIATE' }
+  } else if (segment === 'at-risk') {
+    where = {
+      ...where,
+      orders: {
+        some: { paymentStatus: 'PAID' },
+        none: { paymentStatus: 'PAID', createdAt: { gte: ninetyDaysAgo } },
+      },
+    }
+  }
+
+  const baseCustomers = await prisma.user.findMany({
+    where,
     include: {
       _count: { select: { orders: true } },
       orders: {
         where: { paymentStatus: 'PAID' },
-        select: { total: true },
+        select: { total: true, createdAt: true },
       },
     },
     orderBy: { createdAt: 'desc' },
+    take: 500,
   })
+
+  let customers = baseCustomers
+  if (segment === 'vip') {
+    customers = baseCustomers.filter(
+      (c) => c.orders.reduce((sum, o) => sum + o.total, 0) >= 200000
+    )
+  }
+
+  // Counts
+  const [total, newCount, affiliateCount, atRiskCount] = await Promise.all([
+    prisma.user.count({ where: { role: { in: ['CUSTOMER', 'AFFILIATE'] } } }),
+    prisma.user.count({
+      where: { role: { in: ['CUSTOMER', 'AFFILIATE'] }, createdAt: { gte: thirtyDaysAgo } },
+    }),
+    prisma.user.count({ where: { role: 'AFFILIATE' } }),
+    prisma.user.count({
+      where: {
+        role: { in: ['CUSTOMER', 'AFFILIATE'] },
+        orders: {
+          some: { paymentStatus: 'PAID' },
+          none: { paymentStatus: 'PAID', createdAt: { gte: ninetyDaysAgo } },
+        },
+      },
+    }),
+  ])
+  const vipRows = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
+    `SELECT COUNT(*)::bigint AS count FROM (
+       SELECT u.id, COALESCE(SUM(o.total), 0) AS ltv
+       FROM users u
+       LEFT JOIN orders o ON o."userId" = u.id AND o."paymentStatus" = 'PAID'
+       WHERE u.role IN ('CUSTOMER', 'AFFILIATE')
+       GROUP BY u.id
+       HAVING COALESCE(SUM(o.total), 0) >= 200000
+     ) t`
+  )
+  const vipCount = Number(vipRows[0]?.count ?? 0)
+
+  const tabs: { key: Segment; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: total },
+    { key: 'new', label: 'New (<30d)', count: newCount },
+    { key: 'vip', label: 'VIP ($2k+)', count: vipCount },
+    { key: 'at-risk', label: 'At-Risk (90d+)', count: atRiskCount },
+    { key: 'affiliates', label: 'Affiliates', count: affiliateCount },
+  ]
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Customers</h1>
-        <p className="text-white/40 mt-1">{customers.length} total</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">Customers</h1>
+          <p className="text-white/40 mt-1">{customers.length} shown · {total} total</p>
+        </div>
+        <a
+          href="/api/admin/customers/export"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-700 hover:bg-dark-600 border border-white/10 text-sm text-white/70 hover:text-white transition-colors"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </a>
+      </div>
+
+      {/* Segment tabs */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {tabs.map((t) => {
+          const active = segment === t.key
+          const href = t.key === 'all' ? '/admin/customers' : `/admin/customers?segment=${t.key}`
+          return (
+            <Link
+              key={t.key}
+              href={href}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+                active
+                  ? 'bg-brand-500 text-white border-brand-500'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10 border-white/10'
+              }`}
+            >
+              <span>{t.label}</span>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded ${
+                  active ? 'bg-white/20' : 'bg-white/10'
+                }`}
+              >
+                {t.count}
+              </span>
+            </Link>
+          )
+        })}
       </div>
 
       <div className="glass rounded-2xl overflow-hidden">
@@ -53,6 +183,13 @@ export default async function AdminCustomersPage() {
                 </tr>
               )
             })}
+            {customers.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-5 py-12 text-center text-white/30 text-sm">
+                  No customers match this segment.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

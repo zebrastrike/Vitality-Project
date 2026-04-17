@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Eye } from 'lucide-react'
+import { Eye, Download } from 'lucide-react'
 
 export default async function AdminOrdersPage() {
   const orders = await prisma.order.findMany({
@@ -25,9 +25,17 @@ export default async function AdminOrdersPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <p className="text-white/40 mt-1">{orders.length} total</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">Orders</h1>
+          <p className="text-white/40 mt-1">{orders.length} total</p>
+        </div>
+        <a
+          href="/api/admin/orders/export"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-700 hover:bg-dark-600 border border-white/10 text-sm text-white/70 hover:text-white transition-colors"
+        >
+          <Download className="w-4 h-4" /> Export CSV
+        </a>
       </div>
 
       <div className="glass rounded-2xl overflow-hidden">

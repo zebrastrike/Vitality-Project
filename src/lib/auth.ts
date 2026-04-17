@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
+import { logAudit } from './audit'
 import bcrypt from 'bcryptjs'
 
 const cookieDomain = process.env.NEXTAUTH_COOKIE_DOMAIN
@@ -38,14 +39,36 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
+        const email = credentials.email.toLowerCase()
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() },
+          where: { email },
         })
 
-        if (!user || !user.passwordHash) return null
+        if (!user || !user.passwordHash) {
+          await logAudit({
+            userEmail: email,
+            action: 'auth.login.failure',
+            metadata: { reason: 'not_found_or_oauth_only' },
+          })
+          return null
+        }
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash)
-        if (!valid) return null
+        if (!valid) {
+          await logAudit({
+            userId: user.id,
+            userEmail: user.email,
+            action: 'auth.login.failure',
+            metadata: { reason: 'bad_password' },
+          })
+          return null
+        }
+
+        await logAudit({
+          userId: user.id,
+          userEmail: user.email,
+          action: 'auth.login.success',
+        })
 
         return {
           id: user.id,

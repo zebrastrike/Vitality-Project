@@ -1,10 +1,24 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { NewsletterSignup } from './newsletter-signup'
 
 export function Footer() {
   return (
     <footer className="border-t border-white/10 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Newsletter band */}
+        <div className="glass rounded-2xl p-6 md:p-8 mb-12 flex flex-col md:flex-row md:items-center gap-6">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-white mb-1">Stay in the loop</h3>
+            <p className="text-white/50 text-sm max-w-md">
+              Research updates, product drops, and members-only perks. No spam — unsubscribe anytime.
+            </p>
+          </div>
+          <div className="md:w-96">
+            <NewsletterSignup source="footer" />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <Image src="/logo-white.png" alt="The Vitality Project" width={160} height={160} className="h-12 w-auto object-contain mb-3" />
@@ -38,6 +52,7 @@ export function Footer() {
               <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
               <li><Link href="/research" className="hover:text-white transition-colors">Research</Link></li>
               <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
               <li><Link href="/shipping" className="hover:text-white transition-colors">Shipping Policy</Link></li>
               <li><Link href="/affiliate" className="hover:text-white transition-colors">Affiliates</Link></li>
               <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>

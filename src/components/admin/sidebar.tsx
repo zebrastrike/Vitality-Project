@@ -5,20 +5,27 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
-  Settings, Tag, Truck, Link2, MessageSquare, LogOut, Building2,
+  Settings, Tag, Truck, Link2, LogOut, Building2, Sparkles, Factory,
+  MessageSquare, Star, FileSearch,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
+import { NotificationBell } from '@/components/admin/notification-bell'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/admin/fulfillments', label: 'Fulfillments', icon: Truck },
+  { href: '/admin/facilities', label: 'Facilities', icon: Factory },
   { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/credits', label: 'Credits & Loyalty', icon: Sparkles },
   { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
   { href: '/admin/affiliates', label: 'Affiliates', icon: Link2 },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
   { href: '/admin/discounts', label: 'Discounts', icon: Tag },
-  { href: '/admin/shipping', label: 'Shipping', icon: Truck },
+  { href: '/admin/support', label: 'Support', icon: MessageSquare },
+  { href: '/admin/reviews', label: 'Reviews', icon: Star },
+  { href: '/admin/audit', label: 'Audit Log', icon: FileSearch },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -28,9 +35,12 @@ export function AdminSidebar() {
   return (
     <aside className="w-60 shrink-0 border-r border-white/5 bg-dark-800 flex flex-col min-h-screen">
       {/* Logo */}
-      <div className="p-6 border-b border-white/5">
-        <div className="text-sm font-bold uppercase tracking-widest text-white/40 mb-0.5">Admin</div>
-        <div className="font-bold text-gradient">VITALITY PROJECT</div>
+      <div className="p-6 border-b border-white/5 flex items-start justify-between gap-2">
+        <div>
+          <div className="text-sm font-bold uppercase tracking-widest text-white/40 mb-0.5">Admin</div>
+          <div className="font-bold text-gradient">VITALITY PROJECT</div>
+        </div>
+        <NotificationBell />
       </div>
 
       {/* Nav */}

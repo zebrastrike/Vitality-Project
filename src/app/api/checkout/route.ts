@@ -5,6 +5,22 @@ import { prisma } from '@/lib/prisma'
 import { generateOrderNumber } from '@/lib/utils'
 import { processPayment, validateCard, type CardDetails } from '@/lib/payments'
 import { resolveTenantFromHost } from '@/lib/tenant'
+import { sendEmail } from '@/lib/email'
+import {
+  orderConfirmation,
+  newOrderAlert,
+} from '@/lib/email-templates'
+import { calculateShipping } from '@/lib/shipping'
+import { calculateTax } from '@/lib/tax'
+import {
+  applyStoreCredit,
+} from '@/lib/store-credit'
+import {
+  awardPointsForOrder,
+  redeemPointsForOrder,
+  pointsToDiscountCents,
+} from '@/lib/loyalty'
+import { routeOrderToFacilities } from '@/lib/fulfillment'
 import { z } from 'zod'
 
 const checkoutSchema = z.object({
@@ -24,6 +40,8 @@ const checkoutSchema = z.object({
     country: z.string().default('US'),
   }),
   discountCode: z.string().optional(),
+  useStoreCredit: z.boolean().optional().default(false),
+  useLoyaltyPoints: z.number().int().min(0).optional().default(0),
   card: z.object({
     number: z.string(),
     expMonth: z.string(),
@@ -100,6 +118,7 @@ export async function POST(req: NextRequest) {
     })
 
     let discount = 0
+    let appliedDiscountCodeId: string | null = null
     if (data.discountCode) {
       const code = await prisma.discountCode.findUnique({
         where: { code: data.discountCode.toUpperCase(), active: true },
@@ -108,28 +127,69 @@ export async function POST(req: NextRequest) {
         discount = code.type === 'PERCENTAGE'
           ? Math.round(subtotal * (code.value / 100))
           : Math.min(code.value, subtotal)
-        await prisma.discountCode.update({
-          where: { id: code.id },
-          data: { usedCount: { increment: 1 } },
-        })
+        appliedDiscountCodeId = code.id
       }
     }
 
-    const total = subtotal - discount
+    // Shipping & tax based on destination
+    const { rate: shippingCost } = await calculateShipping(
+      subtotal,
+      data.shippingAddress.country,
+      data.shippingAddress.state
+    )
+    const taxableBase = Math.max(0, subtotal - discount)
+    const taxAmount = calculateTax(taxableBase, data.shippingAddress.state)
+
+    // Preview how many points the user wants to redeem, clamped to their balance.
+    let plannedPointsRedeem = 0
+    let plannedPointsDiscount = 0
+    if (data.useLoyaltyPoints && data.useLoyaltyPoints > 0) {
+      const acct = await prisma.loyaltyAccount.findUnique({
+        where: { userId: session.user.id },
+      })
+      const available = acct?.points ?? 0
+      plannedPointsRedeem = Math.min(data.useLoyaltyPoints, available)
+      plannedPointsDiscount = pointsToDiscountCents(plannedPointsRedeem)
+    }
+
+    // Preview store credit (actual apply happens once we have orderId)
+    let plannedCreditUse = 0
+    if (data.useStoreCredit) {
+      const cred = await prisma.storeCredit.findUnique({
+        where: { userId: session.user.id },
+      })
+      plannedCreditUse = Math.max(0, cred?.balance ?? 0)
+    }
+
+    // Order-level preview total: subtotal - discount - pointsDiscount - credit + shipping + tax
+    const preCreditTotal = Math.max(
+      0,
+      subtotal - discount - plannedPointsDiscount + shippingCost + taxAmount
+    )
+    const actualCreditUse = Math.min(plannedCreditUse, preCreditTotal)
+    const total = preCreditTotal - actualCreditUse
+
     const orderNumber = generateOrderNumber()
 
-    const paymentResult = await processPayment(
-      total,
-      data.card as CardDetails,
-      orderNumber,
-      { email: data.email, userId: session.user.id }
-    )
-
-    if (!paymentResult.success) {
-      return NextResponse.json(
-        { error: paymentResult.error ?? 'Payment failed. Please check your card details and try again.' },
-        { status: 402 }
+    // Only charge the card for the remaining balance.
+    let paymentTransactionId: string | undefined
+    if (total > 0) {
+      const paymentResult = await processPayment(
+        total,
+        data.card as CardDetails,
+        orderNumber,
+        { email: data.email, userId: session.user.id }
       )
+
+      if (!paymentResult.success) {
+        return NextResponse.json(
+          { error: paymentResult.error ?? 'Payment failed. Please check your card details and try again.' },
+          { status: 402 }
+        )
+      }
+      paymentTransactionId = paymentResult.transactionId
+    } else {
+      paymentTransactionId = `no_charge_${Date.now().toString(36)}`
     }
 
     const shippingAddress = await prisma.address.findFirst({
@@ -154,13 +214,13 @@ export async function POST(req: NextRequest) {
         email: data.email,
         subtotal,
         discount,
-        shipping: 0,
-        tax: 0,
+        shipping: shippingCost,
+        tax: taxAmount,
         total,
         discountCode: data.discountCode,
         paymentMethod: 'card',
         paymentStatus: 'PAID',
-        paymentId: paymentResult.transactionId,
+        paymentId: paymentTransactionId,
         status: 'PROCESSING',
         organizationId,
         locationId,
@@ -170,6 +230,57 @@ export async function POST(req: NextRequest) {
         items: { create: orderItems },
       },
     })
+
+    if (appliedDiscountCodeId) {
+      await prisma.discountCode.update({
+        where: { id: appliedDiscountCodeId },
+        data: { usedCount: { increment: 1 } },
+      })
+    }
+
+    // Actually debit loyalty points + store credit now that the order exists.
+    let pointsUsed = 0
+    if (plannedPointsRedeem > 0) {
+      const redeemed = await redeemPointsForOrder({
+        userId: session.user.id,
+        pointsToRedeem: plannedPointsRedeem,
+        orderId: order.id,
+      })
+      pointsUsed = redeemed.pointsUsed
+    }
+
+    let creditApplied = 0
+    if (actualCreditUse > 0) {
+      creditApplied = await applyStoreCredit({
+        userId: session.user.id,
+        requested: actualCreditUse,
+        maxAmount: preCreditTotal,
+        orderId: order.id,
+      })
+    }
+
+    // Award loyalty points based on what the customer actually paid.
+    const pointsEarned = await awardPointsForOrder({
+      userId: session.user.id,
+      orderId: order.id,
+      orderTotal: total + creditApplied, // total + credit = taxed+shipped price, excluding points discount
+    }).then((r) => r.pointsEarned).catch(() => 0)
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        storeCreditUsed: creditApplied,
+        loyaltyPointsUsed: pointsUsed,
+        loyaltyPointsEarned: pointsEarned,
+      },
+    })
+
+    // Route items to facilities for fulfillment
+    try {
+      await routeOrderToFacilities(order.id)
+    } catch (err) {
+      console.error('Fulfillment routing failed:', err)
+    }
 
     // Location commission (gym/clinic gets a cut)
     if (locationId) {
@@ -204,7 +315,59 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ orderId: order.id, orderNumber: order.orderNumber, total: order.total })
+    // Fire-and-forget transactional emails (do not block the response / do not break checkout on failure)
+    void (async () => {
+      try {
+        const confirmation = orderConfirmation({
+          orderNumber: order.orderNumber,
+          customerName: data.shippingAddress.name || session.user.name || 'there',
+          items: orderItems.map((it) => ({
+            name: it.name,
+            quantity: it.quantity,
+            price: it.price,
+            total: it.total,
+          })),
+          subtotal,
+          total,
+          shippingAddress: data.shippingAddress,
+        })
+        await sendEmail({
+          to: data.email,
+          subject: confirmation.subject,
+          html: confirmation.html,
+          text: confirmation.text,
+        })
+
+        const adminEmail = process.env.ADMIN_EMAIL
+        if (adminEmail) {
+          const alert = newOrderAlert({
+            adminEmail,
+            orderNumber: order.orderNumber,
+            total,
+            customerEmail: data.email,
+          })
+          await sendEmail({
+            to: adminEmail,
+            subject: alert.subject,
+            html: alert.html,
+            text: alert.text,
+          })
+        }
+      } catch (err) {
+        console.error('Order email send failed:', err)
+      }
+    })()
+
+    return NextResponse.json({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      total: order.total,
+      shipping: shippingCost,
+      tax: taxAmount,
+      storeCreditUsed: creditApplied,
+      loyaltyPointsUsed: pointsUsed,
+      loyaltyPointsEarned: pointsEarned,
+    })
   } catch (error) {
     console.error('Checkout error:', error)
     if (error instanceof z.ZodError) {

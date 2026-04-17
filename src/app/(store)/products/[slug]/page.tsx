@@ -1,11 +1,18 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { formatPrice } from '@/lib/utils'
 import { AddToCartButton } from '@/components/store/add-to-cart-button'
+import { WishlistButton } from '@/components/store/wishlist-button'
 import { Badge } from '@/components/ui/badge'
-import { Shield, Package, Zap } from 'lucide-react'
+import { Shield, Package, Zap, Edit3 } from 'lucide-react'
 import type { Metadata } from 'next'
+import { getRelatedProducts } from '@/lib/recommendations'
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -49,8 +56,68 @@ export default async function ProductPage({ params }: Props) {
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : null
 
+  const related = await getRelatedProducts(product.id, 4)
+
+  // Determine if current user has purchased this product (to show review button)
+  const session = await getServerSession(authOptions)
+  let canReview = false
+  let alreadyReviewed = false
+  if (session?.user?.id) {
+    const purchase = await prisma.orderItem.findFirst({
+      where: {
+        productId: product.id,
+        order: { userId: session.user.id, paymentStatus: 'PAID' },
+      },
+      select: { id: true },
+    })
+    canReview = !!purchase
+    if (canReview) {
+      const existing = await prisma.review.findFirst({
+        where: { productId: product.id, userId: session.user.id },
+        select: { id: true },
+      })
+      alreadyReviewed = !!existing
+    }
+  }
+
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.shortDesc || product.description?.slice(0, 500) || product.name,
+    sku: product.sku || product.id,
+    image: product.images.map((i) => i.url),
+    url: `${APP_URL}/products/${product.slug}`,
+    brand: {
+      '@type': 'Brand',
+      name: 'The Vitality Project',
+    },
+    offers: {
+      '@type': 'Offer',
+      url: `${APP_URL}/products/${product.slug}`,
+      priceCurrency: 'USD',
+      price: (product.price / 100).toFixed(2),
+      availability: inStock
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+    },
+    ...(product.reviews.length > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: (
+          product.reviews.reduce((s, r) => s + r.rating, 0) / product.reviews.length
+        ).toFixed(1),
+        reviewCount: product.reviews.length,
+      },
+    }),
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Images */}
         <div className="space-y-4">
@@ -110,17 +177,31 @@ export default async function ProductPage({ params }: Props) {
           )}
 
           {/* Add to cart */}
-          <AddToCartButton
-            product={{
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              slug: product.slug,
-              image: mainImage?.url,
-              inventory: product.inventory,
-              variants: product.variants,
-            }}
-          />
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <AddToCartButton
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  slug: product.slug,
+                  image: mainImage?.url,
+                  inventory: product.inventory,
+                  variants: product.variants,
+                }}
+              />
+            </div>
+            <WishlistButton
+              product={{
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                price: product.price,
+                image: mainImage?.url,
+              }}
+              size="lg"
+            />
+          </div>
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10">
@@ -156,24 +237,110 @@ export default async function ProductPage({ params }: Props) {
       )}
 
       {/* Reviews */}
-      {product.reviews.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6">Reviews ({product.reviews.length})</h2>
+      <div className="mt-12">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <h2 className="text-2xl font-bold">
+            Reviews ({product.reviews.length})
+          </h2>
+          {canReview && !alreadyReviewed && (
+            <Link
+              href={`/products/${product.slug}/review`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500/15 text-brand-400 hover:bg-brand-500/25 transition-colors text-sm font-medium"
+            >
+              <Edit3 className="w-4 h-4" /> Write a Review
+            </Link>
+          )}
+          {canReview && alreadyReviewed && (
+            <span className="text-white/40 text-sm">
+              You reviewed this product.
+            </span>
+          )}
+        </div>
+        {product.reviews.length > 0 ? (
           <div className="space-y-4">
             {product.reviews.map((review) => (
               <div key={review.id} className="glass rounded-2xl p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i} className={i < review.rating ? 'text-amber-400' : 'text-white/20'}>★</span>
+                      <span
+                        key={i}
+                        className={
+                          i < review.rating
+                            ? 'text-amber-400'
+                            : 'text-white/20'
+                        }
+                      >
+                        ★
+                      </span>
                     ))}
                   </div>
-                  <span className="font-semibold text-sm">{review.user.name ?? 'Anonymous'}</span>
+                  <span className="font-semibold text-sm">
+                    {review.user.name ?? 'Anonymous'}
+                  </span>
                 </div>
-                {review.title && <h4 className="font-medium mb-1">{review.title}</h4>}
-                {review.body && <p className="text-white/60 text-sm">{review.body}</p>}
+                {review.title && (
+                  <h4 className="font-medium mb-1">{review.title}</h4>
+                )}
+                {review.body && (
+                  <p className="text-white/60 text-sm">{review.body}</p>
+                )}
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="glass rounded-2xl p-8 text-center text-white/40 text-sm">
+            No reviews yet.
+          </div>
+        )}
+      </div>
+
+      {/* You May Also Like */}
+      {related.length > 0 && (
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {related.map((p) => {
+              const img = p.images?.[0]
+              return (
+                <Link
+                  key={p.id}
+                  href={`/products/${p.slug}`}
+                  className="group glass rounded-2xl overflow-hidden card-hover"
+                >
+                  <div className="relative aspect-square bg-dark-800">
+                    {img ? (
+                      <Image
+                        src={img.url}
+                        alt={img.alt ?? p.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/10">
+                        <span className="text-3xl font-bold">VP</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    {p.category && (
+                      <p className="text-[10px] text-brand-400 uppercase tracking-wider mb-1">
+                        {p.category.name}
+                      </p>
+                    )}
+                    <h3 className="font-semibold text-white text-sm mb-1 line-clamp-2">{p.name}</h3>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-bold text-white">{formatPrice(p.price)}</span>
+                      {p.comparePrice && (
+                        <span className="text-xs text-white/40 line-through">
+                          {formatPrice(p.comparePrice)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}

@@ -30,6 +30,16 @@ model User {
   cartItems     CartItem[]
   orgMemberships OrgMember[]
   orgClients     OrgClient[]
+  loyalty       LoyaltyAccount?
+  storeCredit   StoreCredit?
+  supportTickets SupportTicket[]
+
+  verifyToken      String?   @unique
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  twoFASecret      String?
+  twoFAEnabled     Boolean   @default(false)
+  birthday         DateTime?
 
   @@map("users")
 }
@@ -278,6 +288,7 @@ model Product {
   cartItems     CartItem[]
   reviews       Review[]
   priceOverrides ProductPriceOverride[]
+  facilities    ProductFacility[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -367,6 +378,10 @@ model Order {
   location       Location?     @relation(fields: [locationId], references: [id])
   client         OrgClient?    @relation(fields: [clientId], references: [id])
   commissions    OrderCommission[]
+  fulfillments   Fulfillment[]
+  storeCreditUsed Int          @default(0)
+  loyaltyPointsUsed Int        @default(0)
+  loyaltyPointsEarned Int      @default(0)
 
   @@map("orders")
   @@index([organizationId])
@@ -410,6 +425,7 @@ model OrderItem {
   total     Int     // in cents
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
+  fulfillmentItems FulfillmentItem[]
 
   @@map("order_items")
 }
@@ -446,6 +462,7 @@ model DiscountCode {
   usedCount   Int          @default(0)
   active      Boolean      @default(true)
   expiresAt   DateTime?
+  rule        CouponRule?
   createdAt   DateTime     @default(now())
 
   @@map("discount_codes")
@@ -454,6 +471,8 @@ model DiscountCode {
 enum DiscountType {
   PERCENTAGE
   FIXED
+  FREE_SHIPPING
+  BOGO
 }
 
 // ─── Reviews ─────────────────────────────────────────────────────────────────
@@ -632,4 +651,344 @@ model MembershipSignup {
   createdAt DateTime @default(now())
 
   @@map("membership_signups")
+}
+
+// ─── Fulfillment Facilities (licensed Florida labs) ──────────────────────────
+
+model Facility {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  contactName String?
+  email       String
+  phone       String?
+  addressLine1 String
+  addressLine2 String?
+  city        String
+  state       String   @default("FL")
+  zip         String
+  country     String   @default("US")
+  licenseNumber String?
+  apiEndpoint String?  // supplier API base URL
+  apiKey      String?  // encrypted credentials
+  active      Boolean  @default(true)
+  slaHours    Int      @default(48) // fulfillment SLA
+  notes       String?  @db.Text
+  products    ProductFacility[]
+  fulfillments Fulfillment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("facilities")
+}
+
+model ProductFacility {
+  id         String   @id @default(cuid())
+  productId  String
+  facilityId String
+  primary    Boolean  @default(false) // default facility for this product
+  cost       Int?     // wholesale cost in cents
+  inventory  Int      @default(0)     // facility-tracked inventory
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, facilityId])
+  @@map("product_facilities")
+}
+
+model Fulfillment {
+  id             String             @id @default(cuid())
+  orderId        String
+  facilityId     String
+  status         FulfillmentStatus  @default(PENDING)
+  externalId     String?            // supplier's order reference
+  trackingNumber String?
+  trackingUrl    String?
+  carrier        String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  notes          String?            @db.Text
+  order          Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  facility       Facility           @relation(fields: [facilityId], references: [id])
+  items          FulfillmentItem[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("fulfillments")
+  @@index([orderId])
+  @@index([facilityId])
+  @@index([status])
+}
+
+model FulfillmentItem {
+  id            String      @id @default(cuid())
+  fulfillmentId String
+  orderItemId   String
+  quantity      Int
+  fulfillment   Fulfillment @relation(fields: [fulfillmentId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem   @relation(fields: [orderItemId], references: [id])
+
+  @@map("fulfillment_items")
+}
+
+enum FulfillmentStatus {
+  PENDING
+  ACCEPTED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  FAILED
+}
+
+// ─── Loyalty & Rewards ──────────────────────────────────────────────────────
+
+model LoyaltyAccount {
+  id          String              @id @default(cuid())
+  userId      String              @unique
+  tier        LoyaltyTier         @default(BRONZE)
+  points      Int                 @default(0)
+  lifetimeSpend Int               @default(0) // cents
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions LoyaltyTransaction[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("loyalty_accounts")
+}
+
+enum LoyaltyTier {
+  BRONZE    // default
+  SILVER    // $500+ lifetime
+  GOLD      // $2000+ lifetime
+  PLATINUM  // $5000+ lifetime
+}
+
+model LoyaltyTransaction {
+  id          String         @id @default(cuid())
+  accountId   String
+  type        LoyaltyTxType
+  points      Int            // positive for earn, negative for redeem
+  description String
+  orderId     String?        // if tied to an order
+  account     LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+
+  @@map("loyalty_transactions")
+}
+
+enum LoyaltyTxType {
+  EARN_PURCHASE
+  EARN_REFERRAL
+  EARN_REVIEW
+  EARN_BIRTHDAY
+  EARN_ADMIN    // manual admin grant
+  REDEEM_DISCOUNT
+  EXPIRE
+  ADJUST        // admin adjustment
+}
+
+// ─── Store Credit ───────────────────────────────────────────────────────────
+
+model StoreCredit {
+  id          String             @id @default(cuid())
+  userId      String             @unique
+  balance     Int                @default(0) // cents
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions StoreCreditTxn[]
+  updatedAt   DateTime           @updatedAt
+
+  @@map("store_credits")
+}
+
+model StoreCreditTxn {
+  id          String      @id @default(cuid())
+  creditId    String
+  type        CreditTxType
+  amount      Int         // positive for credit, negative for debit (cents)
+  description String
+  orderId     String?
+  credit      StoreCredit @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+
+  @@map("store_credit_txns")
+}
+
+enum CreditTxType {
+  REFUND
+  REFERRAL_BONUS
+  ADMIN_GRANT
+  BIRTHDAY
+  LOYALTY_REDEEM
+  CHECKOUT_APPLY  // used at checkout
+  EXPIRE
+}
+
+// ─── Product Reviews (ENABLED via existing Review model) ────────────────────
+// Review model already exists at line ~460
+
+// ─── Support Tickets ────────────────────────────────────────────────────────
+
+model SupportTicket {
+  id          String          @id @default(cuid())
+  number      String          @unique // e.g. VP-TKT-000001
+  userId      String?
+  user        User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email       String
+  subject     String
+  status      TicketStatus    @default(OPEN)
+  priority    TicketPriority  @default(NORMAL)
+  orderId     String?         // if related to an order
+  assignedTo  String?         // admin user id
+  messages    TicketMessage[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("support_tickets")
+  @@index([status])
+  @@index([userId])
+}
+
+model TicketMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  authorId   String?       // null = customer, set = admin
+  authorName String
+  body       String        @db.Text
+  internal   Boolean       @default(false) // admin notes not visible to customer
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+
+  @@map("ticket_messages")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ─── Newsletter & Marketing ─────────────────────────────────────────────────
+
+model NewsletterSubscriber {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  source       String?
+  confirmed    Boolean   @default(false)
+  confirmToken String?
+  unsubscribed Boolean   @default(false)
+  tags         String[]
+  createdAt    DateTime  @default(now())
+
+  @@map("newsletter_subscribers")
+}
+
+model CartAbandonment {
+  id         String   @id @default(cuid())
+  userId     String?
+  email      String?
+  cartJson   String   @db.Text
+  subtotal   Int
+  emailSent  Boolean  @default(false)
+  emailedAt  DateTime?
+  recovered  Boolean  @default(false)
+  recoveredAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@map("cart_abandonments")
+}
+
+// ─── Audit Log ──────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  userEmail  String?
+  action     String   // e.g. "order.refund", "product.update", "user.login"
+  entityType String?  // e.g. "Order", "Product"
+  entityId   String?
+  metadata   String?  @db.Text // JSON
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+  @@index([action])
+  @@index([userId])
+  @@index([entityType, entityId])
+}
+
+// ─── Admin Notifications ────────────────────────────────────────────────────
+
+model AdminNotification {
+  id          String           @id @default(cuid())
+  type        NotificationType
+  title       String
+  body        String           @db.Text
+  link        String?          // admin path to view details
+  entityType  String?
+  entityId    String?
+  readBy      String[]         // admin user ids who've read
+  createdAt   DateTime         @default(now())
+
+  @@map("admin_notifications")
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  ORDER_NEW
+  ORDER_REFUND_REQUEST
+  APPLICATION_NEW
+  LOW_STOCK
+  FULFILLMENT_DELAYED
+  SUPPORT_TICKET_NEW
+  SYSTEM
+}
+
+// ─── Page Views / Analytics ─────────────────────────────────────────────────
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  userId    String?
+  sessionId String
+  referrer  String?
+  userAgent String?
+  country   String?
+  createdAt DateTime @default(now())
+
+  @@map("page_views")
+  @@index([path, createdAt])
+  @@index([sessionId])
+}
+
+// ─── Enhanced Coupons (supplement DiscountCode) ─────────────────────────────
+
+model CouponRule {
+  id                 String       @id @default(cuid())
+  discountCodeId     String       @unique
+  minOrderCents      Int?
+  productIds         String[]     // specific products
+  categoryIds        String[]     // specific categories
+  customerIds        String[]     // specific customers
+  newCustomersOnly   Boolean      @default(false)
+  membersOnly        Boolean      @default(false)
+  tierRequired       LoyaltyTier?
+  stackable          Boolean      @default(false)
+  autoApply          Boolean      @default(false)
+  firstPurchaseOnly  Boolean      @default(false)
+  usesPerCustomer    Int?
+  discountCode       DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+
+  @@map("coupon_rules")
 }

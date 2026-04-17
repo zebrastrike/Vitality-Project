@@ -60,7 +60,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           </div>
 
           {/* Admin Actions — client component */}
-          <OrderActions order={{ id: order.id, status: order.status, paymentStatus: order.paymentStatus, trackingNumber: order.trackingNumber, trackingUrl: order.trackingUrl, notes: order.notes }} />
+          <OrderActions order={{ id: order.id, status: order.status, paymentStatus: order.paymentStatus, total: order.total, trackingNumber: order.trackingNumber, trackingUrl: order.trackingUrl, notes: order.notes }} />
         </div>
 
         {/* Right: customer + shipping */}

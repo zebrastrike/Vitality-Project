@@ -14,6 +14,8 @@ const statusVariant: Record<string, 'default' | 'success' | 'warning' | 'danger'
   DELIVERED: 'success',
   CANCELLED: 'danger',
   REFUNDED: 'danger',
+  ACCEPTED: 'info',
+  FAILED: 'danger',
 }
 
 interface Props {
@@ -30,6 +32,15 @@ export default async function OrderDetailPage({ params }: Props) {
     include: {
       items: true,
       shippingAddress: true,
+      fulfillments: {
+        include: {
+          facility: { select: { name: true, city: true, state: true } },
+          items: {
+            include: { orderItem: { select: { name: true, quantity: true } } },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      },
     },
   })
 
@@ -81,6 +92,110 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           </div>
 
+          {/* Shipment Status */}
+          {order.fulfillments.length > 0 && (
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <Truck className="w-5 h-5 text-brand-400" />
+                <h2 className="font-semibold">Shipment Status</h2>
+              </div>
+              <div className="space-y-4">
+                {order.fulfillments.map((f, idx) => {
+                  const events = [
+                    { label: 'Processing', done: true },
+                    {
+                      label: 'Shipped',
+                      done: ['SHIPPED', 'DELIVERED'].includes(f.status),
+                      date: f.shippedAt,
+                    },
+                    {
+                      label: 'Delivered',
+                      done: f.status === 'DELIVERED',
+                      date: f.deliveredAt,
+                    },
+                  ]
+                  return (
+                    <div key={f.id} className="border border-white/10 rounded-2xl p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-xs text-white/40 uppercase tracking-wider">
+                            Package {idx + 1} of {order.fulfillments.length}
+                          </p>
+                          <p className="text-sm font-medium mt-0.5">
+                            Ships from {f.facility.name} · {f.facility.city}, {f.facility.state}
+                          </p>
+                        </div>
+                        <Badge variant={statusVariant[f.status] ?? 'default'}>{f.status}</Badge>
+                      </div>
+
+                      {/* Items in this shipment */}
+                      <div className="text-xs text-white/50 mb-4">
+                        {f.items.map((fi) => (
+                          <p key={fi.id}>
+                            · {fi.orderItem.name} <span className="text-white/30">x{fi.quantity}</span>
+                          </p>
+                        ))}
+                      </div>
+
+                      {/* Timeline */}
+                      <div className="flex items-center justify-between mb-4">
+                        {events.map((ev, i) => (
+                          <div key={i} className="flex-1 flex items-center">
+                            <div className="flex flex-col items-center">
+                              <div
+                                className={`w-3 h-3 rounded-full ${
+                                  ev.done ? 'bg-emerald-400' : 'bg-white/10'
+                                }`}
+                              />
+                              <p
+                                className={`text-xs mt-2 whitespace-nowrap ${
+                                  ev.done ? 'text-white' : 'text-white/30'
+                                }`}
+                              >
+                                {ev.label}
+                              </p>
+                              {ev.date && (
+                                <p className="text-[10px] text-white/40 mt-0.5">
+                                  {formatDate(ev.date)}
+                                </p>
+                              )}
+                            </div>
+                            {i < events.length - 1 && (
+                              <div
+                                className={`flex-1 h-px mx-2 ${
+                                  events[i + 1].done ? 'bg-emerald-400/50' : 'bg-white/10'
+                                }`}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Tracking */}
+                      {f.trackingNumber && (
+                        <div className="pt-3 border-t border-white/5 text-sm">
+                          <span className="text-white/50">Tracking ({f.carrier || 'Carrier'}):</span>{' '}
+                          {f.trackingUrl ? (
+                            <a
+                              href={f.trackingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-brand-400 hover:underline font-mono"
+                            >
+                              {f.trackingNumber}
+                            </a>
+                          ) : (
+                            <span className="font-mono text-brand-400">{f.trackingNumber}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Shipping Address */}
           {order.shippingAddress && (
             <div className="glass rounded-2xl p-6">
@@ -98,8 +213,8 @@ export default async function OrderDetailPage({ params }: Props) {
             </div>
           )}
 
-          {/* Tracking */}
-          {order.trackingNumber && (
+          {/* Tracking (legacy single-package view) */}
+          {order.trackingNumber && order.fulfillments.length === 0 && (
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Truck className="w-5 h-5 text-brand-400" />
@@ -136,6 +251,18 @@ export default async function OrderDetailPage({ params }: Props) {
                 <span>-{formatPrice(order.discount)}</span>
               </div>
             )}
+            {order.loyaltyPointsUsed > 0 && (
+              <div className="flex justify-between text-purple-400">
+                <span>Points ({order.loyaltyPointsUsed})</span>
+                <span>-{formatPrice(order.loyaltyPointsUsed)}</span>
+              </div>
+            )}
+            {order.storeCreditUsed > 0 && (
+              <div className="flex justify-between text-emerald-400">
+                <span>Store Credit</span>
+                <span>-{formatPrice(order.storeCreditUsed)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-white/50">Shipping</span>
               <span>{order.shipping === 0 ? 'Free' : formatPrice(order.shipping)}</span>
@@ -152,6 +279,11 @@ export default async function OrderDetailPage({ params }: Props) {
                 <span>{formatPrice(order.total)}</span>
               </div>
             </div>
+            {order.loyaltyPointsEarned > 0 && (
+              <p className="text-xs text-purple-400 pt-2">
+                You earned {order.loyaltyPointsEarned} loyalty points on this order.
+              </p>
+            )}
           </div>
           {order.paymentId && (
             <p className="text-xs text-white/20 mt-4 break-all">

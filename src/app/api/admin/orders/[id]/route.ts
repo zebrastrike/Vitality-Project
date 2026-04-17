@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendEmail } from '@/lib/email'
+import {
+  orderShipped,
+  orderDelivered,
+  orderRefunded,
+} from '@/lib/email-templates'
+import { logAudit } from '@/lib/audit'
+import { createAdminNotification } from '@/lib/notifications'
 import { z } from 'zod'
+
+const LOW_STOCK_THRESHOLD = 5
 
 const updateSchema = z.object({
   status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']).optional(),
@@ -20,6 +30,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   try {
     const data = updateSchema.parse(await req.json())
+
+    // Snapshot the order BEFORE update so we can detect status transitions
+    const prev = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: { select: { name: true, email: true } },
+      },
+    })
+    if (!prev) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
 
     // If marking as PAID, also trigger affiliate commission
     if (data.paymentStatus === 'PAID') {
@@ -50,23 +71,118 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (order) {
         for (const item of order.items) {
           if (item.variantId) {
-            await prisma.productVariant.updateMany({
+            const v = await prisma.productVariant.update({
               where: { id: item.variantId },
               data: { inventory: { decrement: item.quantity } },
-            })
+              include: { product: { select: { name: true } } },
+            }).catch(() => null)
+            if (v && v.inventory <= LOW_STOCK_THRESHOLD) {
+              await createAdminNotification({
+                type: 'LOW_STOCK',
+                title: `Low stock: ${v.product.name} (${v.name})`,
+                body: `Variant inventory is at ${v.inventory}.`,
+                link: `/admin/products/${v.productId}/edit`,
+                entityType: 'ProductVariant',
+                entityId: v.id,
+              })
+            }
           } else {
-            await prisma.product.update({
+            const p = await prisma.product.update({
               where: { id: item.productId },
               data: { inventory: { decrement: item.quantity } },
-            })
+            }).catch(() => null)
+            if (p && p.inventory <= LOW_STOCK_THRESHOLD) {
+              await createAdminNotification({
+                type: 'LOW_STOCK',
+                title: `Low stock: ${p.name}`,
+                body: `Product inventory is at ${p.inventory}.`,
+                link: `/admin/products/${p.id}/edit`,
+                entityType: 'Product',
+                entityId: p.id,
+              })
+            }
           }
         }
       }
     }
 
     const updated = await prisma.order.update({ where: { id: id }, data })
+
+    // Detect status transitions that should trigger customer emails
+    const customerName = prev.user?.name || 'there'
+    const customerEmail = prev.email
+
+    const becameShipped =
+      data.status === 'SHIPPED' && prev.status !== 'SHIPPED'
+    const becameDelivered =
+      data.status === 'DELIVERED' && prev.status !== 'DELIVERED'
+    const becameRefunded =
+      (data.status === 'REFUNDED' && prev.status !== 'REFUNDED') ||
+      (data.paymentStatus === 'REFUNDED' && prev.paymentStatus !== 'REFUNDED')
+
+    if (becameShipped || becameDelivered || becameRefunded) {
+      void (async () => {
+        try {
+          if (becameShipped) {
+            const tpl = orderShipped({
+              orderNumber: updated.orderNumber,
+              customerName,
+              trackingNumber: updated.trackingNumber,
+              trackingUrl: updated.trackingUrl,
+              carrier: null,
+            })
+            await sendEmail({
+              to: customerEmail,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+            })
+          } else if (becameDelivered) {
+            const tpl = orderDelivered({
+              orderNumber: updated.orderNumber,
+              customerName,
+            })
+            await sendEmail({
+              to: customerEmail,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+            })
+          } else if (becameRefunded) {
+            const tpl = orderRefunded({
+              orderNumber: updated.orderNumber,
+              customerName,
+              amount: updated.total,
+            })
+            await sendEmail({
+              to: customerEmail,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+            })
+          }
+        } catch (err) {
+          console.error('Order status email failed:', err)
+        }
+      })()
+    }
+
+    await logAudit({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: becameRefunded
+        ? 'order.refund'
+        : data.status
+        ? `order.status.${data.status.toLowerCase()}`
+        : 'order.update',
+      entityType: 'Order',
+      entityId: id,
+      metadata: data,
+    })
+
     return NextResponse.json(updated)
   } catch (error) {
+    console.error('Order update error:', error)
     return NextResponse.json({ error: 'Update failed' }, { status: 500 })
   }
 }

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { slugify } from '@/lib/utils'
+import { logAudit } from '@/lib/audit'
 
 const productSchema = z.object({
   name: z.string().min(1).max(255),
@@ -30,6 +31,14 @@ export async function POST(req: NextRequest) {
     const product = await prisma.product.create({
       data: { ...data, slug: slugify(data.name), images: { create: images } },
       include: { images: true, category: true },
+    })
+    await logAudit({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: 'product.create',
+      entityType: 'Product',
+      entityId: product.id,
+      metadata: { name: product.name, price: product.price },
     })
     return NextResponse.json(product, { status: 201 })
   } catch (error) {

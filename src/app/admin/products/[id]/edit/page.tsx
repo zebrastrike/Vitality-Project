@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { ProductVariantsEditor } from '@/components/admin/product-variants-editor'
 
 type Status = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
 
@@ -185,6 +186,15 @@ export default function EditProductPage() {
             </div>
           </div>
           <Input label="Tags (comma separated)" value={form.tags} onChange={set('tags')} placeholder="peptide, recovery, bpc-157" />
+        </div>
+
+        {/* Variants */}
+        <div className="glass rounded-2xl p-6 space-y-4">
+          <h2 className="font-semibold text-white/80">Variants</h2>
+          <p className="text-xs text-white/40">
+            Optional product variations (e.g. different doses or pack sizes). Variant price & inventory override the product-level values at checkout.
+          </p>
+          <ProductVariantsEditor productId={id as string} />
         </div>
 
         {/* Feedback */}

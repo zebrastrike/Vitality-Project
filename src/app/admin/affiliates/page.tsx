@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, XCircle, Download } from 'lucide-react'
 
 export default async function AdminAffiliatesPage() {
   const affiliates = await prisma.affiliate.findMany({
@@ -16,9 +16,17 @@ export default async function AdminAffiliatesPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Affiliates</h1>
-        <p className="text-white/40 mt-1">{affiliates.length} total</p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">Affiliates</h1>
+          <p className="text-white/40 mt-1">{affiliates.length} total</p>
+        </div>
+        <a
+          href="/api/admin/affiliates/commissions/export"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-700 hover:bg-dark-600 border border-white/10 text-sm text-white/70 hover:text-white transition-colors"
+        >
+          <Download className="w-4 h-4" /> Export Commissions CSV
+        </a>
       </div>
 
       <div className="glass rounded-2xl overflow-hidden">

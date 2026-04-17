@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { slugify } from '@/lib/utils'
 import bcrypt from 'bcryptjs'
+import { sendEmail } from '@/lib/email'
+import { newBusinessApplication } from '@/lib/email-templates'
+import { createAdminNotification } from '@/lib/notifications'
 
 export async function POST(req: NextRequest) {
   try {
@@ -81,6 +84,36 @@ export async function POST(req: NextRequest) {
         role: 'OWNER',
       },
     })
+
+    // Notify admin (fire-and-forget) — email + in-app
+    void (async () => {
+      try {
+        await createAdminNotification({
+          type: 'APPLICATION_NEW',
+          title: `New business application: ${businessName}`,
+          body: `${contactName} (${user.email}) applied — ${type.toLowerCase()}`,
+          link: '/admin/organizations',
+          entityType: 'Organization',
+          entityId: organization.id,
+        })
+
+        const adminEmail = process.env.ADMIN_EMAIL
+        if (!adminEmail) return
+        const tpl = newBusinessApplication({
+          adminEmail,
+          businessName,
+          contactEmail: user.email,
+        })
+        await sendEmail({
+          to: adminEmail,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+        })
+      } catch (err) {
+        console.error('Admin application email failed:', err)
+      }
+    })()
 
     return NextResponse.json({
       success: true,

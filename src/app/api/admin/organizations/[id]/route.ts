@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(
   req: NextRequest,
@@ -96,6 +97,19 @@ export async function PATCH(
     const updated = await prisma.organization.findUnique({
       where: { id },
       include: { locations: true },
+    })
+
+    await logAudit({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: status
+        ? status === 'ACTIVE'
+          ? 'org.approve'
+          : 'org.suspend'
+        : 'org.update',
+      entityType: 'Organization',
+      entityId: id,
+      metadata: { status, commissionRate },
     })
 
     return NextResponse.json(updated)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logAudit } from '@/lib/audit'
 import { z } from 'zod'
 
 const updateSchema = z.object({
@@ -43,7 +44,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!await guard()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await guard()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
   try {
     const data = updateSchema.parse(await req.json())
@@ -51,6 +53,14 @@ export async function PATCH(
       where: { id },
       data,
       include: { images: true, category: true },
+    })
+    await logAudit({
+      userId: session.user.id,
+      userEmail: session.user.email,
+      action: 'product.update',
+      entityType: 'Product',
+      entityId: id,
+      metadata: { changes: Object.keys(data) },
     })
     return NextResponse.json(product)
   } catch (error) {
@@ -63,8 +73,16 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!await guard()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const session = await guard()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
   await prisma.product.update({ where: { id }, data: { status: 'ARCHIVED' } })
+  await logAudit({
+    userId: session.user.id,
+    userEmail: session.user.email,
+    action: 'product.delete',
+    entityType: 'Product',
+    entityId: id,
+  })
   return NextResponse.json({ ok: true })
 }
