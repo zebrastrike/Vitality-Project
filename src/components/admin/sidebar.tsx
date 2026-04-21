@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
   Settings, Tag, Truck, Link2, LogOut, Building2, Sparkles, Factory,
-  MessageSquare, Star, FileSearch,
+  MessageSquare, Star, FileSearch, Filter, Send, CheckSquare, Tags as TagsIcon,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { NotificationBell } from '@/components/admin/notification-bell'
@@ -18,6 +18,10 @@ const navItems = [
   { href: '/admin/fulfillments', label: 'Fulfillments', icon: Truck },
   { href: '/admin/facilities', label: 'Facilities', icon: Factory },
   { href: '/admin/customers', label: 'Customers', icon: Users },
+  { href: '/admin/tags', label: 'Tags', icon: TagsIcon },
+  { href: '/admin/tasks', label: 'Tasks', icon: CheckSquare },
+  { href: '/admin/segments', label: 'Segments', icon: Filter },
+  { href: '/admin/campaigns', label: 'Campaigns', icon: Send },
   { href: '/admin/credits', label: 'Credits & Loyalty', icon: Sparkles },
   { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
   { href: '/admin/affiliates', label: 'Affiliates', icon: Link2 },

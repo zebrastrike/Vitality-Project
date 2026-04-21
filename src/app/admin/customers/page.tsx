@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { Download } from 'lucide-react'
+import { Download, ChevronRight } from 'lucide-react'
 import type { Prisma } from '@prisma/client'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -63,6 +63,24 @@ export default async function AdminCustomersPage({ searchParams }: Props) {
     orderBy: { createdAt: 'desc' },
     take: 500,
   })
+
+  // Load assigned tags for the rendered customer list
+  const userIds = baseCustomers.map((c) => c.id)
+  const userTagRows = userIds.length
+    ? await prisma.userTag.findMany({
+        where: { userId: { in: userIds } },
+        include: { tag: true },
+      })
+    : []
+  const tagsByUser = new Map<
+    string,
+    Array<{ id: string; name: string; color: string }>
+  >()
+  for (const row of userTagRows) {
+    const list = tagsByUser.get(row.userId) ?? []
+    list.push({ id: row.tag.id, name: row.tag.name, color: row.tag.color })
+    tagsByUser.set(row.userId, list)
+  }
 
   let customers = baseCustomers
   if (segment === 'vip') {
@@ -158,34 +176,81 @@ export default async function AdminCustomersPage({ searchParams }: Props) {
               <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">Name</th>
               <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">Email</th>
               <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">Role</th>
+              <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">Tags</th>
               <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">Orders</th>
               <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">Lifetime Value</th>
               <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">Joined</th>
+              <th className="px-5 py-4 text-xs font-medium text-white/40 uppercase tracking-wider"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {customers.map((c) => {
               const ltv = c.orders.reduce((sum, o) => sum + o.total, 0)
+              const assignedTags = tagsByUser.get(c.id) ?? []
               return (
-                <tr key={c.id} className="hover:bg-white/2 transition-colors">
-                  <td className="px-5 py-4 text-sm font-medium">{c.name ?? '—'}</td>
-                  <td className="px-5 py-4 text-sm text-white/60">{c.email}</td>
+                <tr key={c.id} className="hover:bg-white/2 transition-colors group">
+                  <td className="px-5 py-4 text-sm font-medium">
+                    <Link
+                      href={`/admin/customers/${c.id}`}
+                      className="hover:text-brand-400 transition-colors"
+                    >
+                      {c.name ?? '—'}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-4 text-sm text-white/60">
+                    <Link
+                      href={`/admin/customers/${c.id}`}
+                      className="hover:text-brand-400 transition-colors"
+                    >
+                      {c.email}
+                    </Link>
+                  </td>
                   <td className="px-5 py-4">
                     <Badge variant={c.role === 'ADMIN' ? 'info' : c.role === 'AFFILIATE' ? 'success' : 'default'}>
                       {c.role}
                     </Badge>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex flex-wrap gap-1">
+                      {assignedTags.slice(0, 2).map((t) => (
+                        <span
+                          key={t.id}
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{
+                            backgroundColor: `${t.color}20`,
+                            color: t.color,
+                            border: `1px solid ${t.color}40`,
+                          }}
+                        >
+                          {t.name}
+                        </span>
+                      ))}
+                      {assignedTags.length > 2 && (
+                        <span className="text-[10px] text-white/40 self-center">
+                          +{assignedTags.length - 2}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-4 text-sm text-white/60">{c._count.orders}</td>
                   <td className="px-5 py-4 text-sm font-medium">
                     {ltv > 0 ? `$${(ltv / 100).toFixed(2)}` : '—'}
                   </td>
                   <td className="px-5 py-4 text-sm text-white/40">{formatDate(c.createdAt)}</td>
+                  <td className="px-5 py-4 text-right">
+                    <Link
+                      href={`/admin/customers/${c.id}`}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-brand-400 hover:bg-white/5 transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </td>
                 </tr>
               )
             })}
             {customers.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center text-white/30 text-sm">
+                <td colSpan={8} className="px-5 py-12 text-center text-white/30 text-sm">
                   No customers match this segment.
                 </td>
               </tr>

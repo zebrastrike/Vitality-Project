@@ -21,6 +21,7 @@ import {
   pointsToDiscountCents,
 } from '@/lib/loyalty'
 import { routeOrderToFacilities } from '@/lib/fulfillment'
+import { attributeOrderToCampaigns } from '@/lib/campaign-attribution'
 import { z } from 'zod'
 
 const checkoutSchema = z.object({
@@ -357,6 +358,9 @@ export async function POST(req: NextRequest) {
         console.error('Order email send failed:', err)
       }
     })()
+
+    // Fire-and-forget: attribute this order to any recently-opened campaign
+    attributeOrderToCampaigns(order.id, session.user.id, total).catch(() => {})
 
     return NextResponse.json({
       orderId: order.id,

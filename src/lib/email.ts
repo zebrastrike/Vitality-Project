@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { prisma } from './prisma'
 
 const FROM =
   process.env.EMAIL_FROM ||
@@ -20,6 +21,7 @@ export type SendEmailArgs = {
   subject: string
   html: string
   text?: string
+  tags?: Array<{ name: string; value: string }>
 }
 
 export type SendEmailResult =
@@ -31,6 +33,7 @@ export async function sendEmail({
   subject,
   html,
   text,
+  tags,
 }: SendEmailArgs): Promise<SendEmailResult> {
   const resend = getResend()
   if (!resend) {
@@ -46,6 +49,7 @@ export async function sendEmail({
       html,
       text,
       replyTo: REPLY_TO,
+      ...(tags && tags.length ? { tags } : {}),
     })
     return { success: true, id: result.data?.id }
   } catch (error) {
@@ -54,5 +58,118 @@ export async function sendEmail({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Tracked email — creates an OutboundMessage row and tags the Resend send
+// with the row id so the webhook can correlate delivery/open/click events.
+// ──────────────────────────────────────────────────────────────────────────
+
+export type SendTrackedEmailArgs = {
+  to: string
+  subject: string
+  html: string
+  text?: string
+  userId?: string | null
+  sentById?: string | null
+  sentByName?: string | null
+  campaignId?: string | null
+}
+
+export type SendTrackedEmailResult =
+  | {
+      success: true
+      messageId: string
+      providerId: string | null
+    }
+  | {
+      success: false
+      messageId: string | null
+      error: string
+    }
+
+export async function sendTrackedEmail(
+  args: SendTrackedEmailArgs,
+): Promise<SendTrackedEmailResult> {
+  const {
+    to,
+    subject,
+    html,
+    text,
+    userId,
+    sentById,
+    sentByName,
+    campaignId,
+  } = args
+
+  // 1. Record the message first so we always have an audit row
+  let outbound
+  try {
+    outbound = await prisma.outboundMessage.create({
+      data: {
+        userId: userId ?? undefined,
+        toEmail: to,
+        channel: 'EMAIL',
+        subject,
+        body: html,
+        sentById: sentById ?? undefined,
+        sentByName: sentByName ?? undefined,
+        status: 'QUEUED',
+        campaignId: campaignId ?? undefined,
+      },
+    })
+  } catch (err) {
+    console.error('[sendTrackedEmail] failed to create OutboundMessage:', err)
+    return {
+      success: false,
+      messageId: null,
+      error: 'Failed to record message',
+    }
+  }
+
+  // 2. Send via Resend (or log in dev) with the row id as a tag
+  const result = await sendEmail({
+    to,
+    subject,
+    html,
+    text,
+    tags: [{ name: 'outbound_message_id', value: outbound.id }],
+  })
+
+  // 3. Update the message row with delivery status + provider id
+  try {
+    if (result.success) {
+      await prisma.outboundMessage.update({
+        where: { id: outbound.id },
+        data: {
+          status: 'SENT',
+          providerId: result.id ?? null,
+        },
+      })
+    } else {
+      await prisma.outboundMessage.update({
+        where: { id: outbound.id },
+        data: {
+          status: 'FAILED',
+          errorMsg: result.error,
+        },
+      })
+    }
+  } catch (err) {
+    console.error('[sendTrackedEmail] failed to update OutboundMessage:', err)
+  }
+
+  if (result.success) {
+    return {
+      success: true,
+      messageId: outbound.id,
+      providerId: result.id ?? null,
+    }
+  }
+  return {
+    success: false,
+    messageId: outbound.id,
+    error: result.error,
   }
 }

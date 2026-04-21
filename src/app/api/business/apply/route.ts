@@ -85,6 +85,54 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Create a matching SalesLead in the pipeline — all applications flow
+    // through the B2B pipeline so sales can work them. If a lead with this
+    // email already exists (e.g. imported from CSV or manually entered), link
+    // the new org to it instead of creating a duplicate.
+    try {
+      const existingLead = await prisma.salesLead.findFirst({
+        where: { contactEmail: user.email, organizationId: null },
+        orderBy: { createdAt: 'desc' },
+      })
+      if (existingLead) {
+        await prisma.salesLead.update({
+          where: { id: existingLead.id },
+          data: {
+            organizationId: organization.id,
+            businessName: businessName,
+            contactName: contactName,
+            contactPhone: phone || existingLead.contactPhone,
+            notes: [existingLead.notes, reason ? `Application reason: ${reason}` : null]
+              .filter(Boolean)
+              .join('\n\n') || null,
+            stage: existingLead.stage === 'CLOSED_LOST' ? 'NEW' : existingLead.stage,
+          },
+        })
+      } else {
+        await prisma.salesLead.create({
+          data: {
+            organizationId: organization.id,
+            businessName,
+            contactName,
+            contactEmail: user.email,
+            contactPhone: phone || null,
+            source: 'website_application',
+            stage: 'NEW',
+            notes: [
+              `Business type: ${type}`,
+              website ? `Website: ${website}` : null,
+              reason ? `Reason: ${reason}` : null,
+            ]
+              .filter(Boolean)
+              .join('\n') || null,
+          },
+        })
+      }
+    } catch (err) {
+      // Non-fatal — application still succeeds
+      console.error('Failed to create sales lead for application:', err)
+    }
+
     // Notify admin (fire-and-forget) — email + in-app
     void (async () => {
       try {

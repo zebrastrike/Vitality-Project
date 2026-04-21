@@ -992,3 +992,235 @@ model CouponRule {
 
   @@map("coupon_rules")
 }
+
+// ─── CRM: Customer Notes, Tags, Tasks ───────────────────────────────────────
+
+model CustomerNote {
+  id         String   @id @default(cuid())
+  userId     String
+  authorId   String   // admin user id
+  authorName String
+  body       String   @db.Text
+  pinned     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("customer_notes")
+  @@index([userId])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6270f2")
+  createdAt DateTime @default(now())
+  users     UserTag[]
+
+  @@map("tags")
+}
+
+model UserTag {
+  userId    String
+  tagId     String
+  taggedBy  String?  // admin user id
+  createdAt DateTime @default(now())
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tagId])
+  @@map("user_tags")
+  @@index([userId])
+  @@index([tagId])
+}
+
+model AdminTask {
+  id          String      @id @default(cuid())
+  title       String
+  description String?     @db.Text
+  status      TaskStatus  @default(PENDING)
+  priority    TaskPriority @default(NORMAL)
+  dueAt       DateTime?
+  assignedTo  String?     // admin user id
+  createdBy   String
+  // Related entity (optional)
+  entityType  String?     // "User" | "Order" | "Organization" | "Ticket"
+  entityId    String?
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("admin_tasks")
+  @@index([assignedTo])
+  @@index([status])
+  @@index([dueAt])
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ─── CRM: Outbound Communications ───────────────────────────────────────────
+
+model OutboundMessage {
+  id          String           @id @default(cuid())
+  userId      String?          // customer
+  toEmail     String?
+  toPhone     String?
+  channel     MessageChannel
+  direction   String           @default("outbound")
+  subject     String?
+  body        String           @db.Text
+  sentById    String?          // admin user id (null = system)
+  sentByName  String?
+  status      MessageStatus    @default(SENT)
+  providerId  String?          // resend id / twilio sid
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  bouncedAt   DateTime?
+  errorMsg    String?
+  // Optional linkage
+  campaignId  String?
+  campaign    MarketingCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+
+  @@map("outbound_messages")
+  @@index([userId])
+  @@index([toEmail])
+  @@index([campaignId])
+  @@index([status])
+}
+
+enum MessageChannel {
+  EMAIL
+  SMS
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  FAILED
+}
+
+// ─── CRM: Marketing Campaigns ───────────────────────────────────────────────
+
+model MarketingCampaign {
+  id             String              @id @default(cuid())
+  name           String
+  channel        MessageChannel      @default(EMAIL)
+  subject        String?
+  body           String              @db.Text // HTML for email, plain for SMS
+  segmentId     String?
+  segment        SavedSegment?       @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  status         CampaignStatus      @default(DRAFT)
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  // Stats
+  recipientCount Int                 @default(0)
+  deliveredCount Int                 @default(0)
+  openedCount    Int                 @default(0)
+  clickedCount   Int                 @default(0)
+  bouncedCount   Int                 @default(0)
+  conversions    Int                 @default(0)   // tied to orders
+  revenueCents   Int                 @default(0)
+  messages       OutboundMessage[]
+  createdBy      String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@map("marketing_campaigns")
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PAUSED
+  CANCELLED
+}
+
+// ─── CRM: Saved Segments ────────────────────────────────────────────────────
+
+model SavedSegment {
+  id          String              @id @default(cuid())
+  name        String
+  description String?
+  filters     String              @db.Text // JSON: { minSpent, maxSpent, tagIds[], tier, hasOrderedIn[days], state, etc }
+  createdBy   String
+  campaigns   MarketingCampaign[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("saved_segments")
+}
+
+// ─── CRM: Sales Leads (B2B Pipeline) ────────────────────────────────────────
+
+model SalesLead {
+  id             String     @id @default(cuid())
+  organizationId String?    @unique // once they apply it links to the org
+  businessName   String
+  contactName    String
+  contactEmail   String
+  contactPhone   String?
+  source         String?    // "website", "tradeshow", "referral", "cold_outreach"
+  stage          LeadStage  @default(NEW)
+  priority       LeadPriority @default(NORMAL)
+  estimatedValue Int?       // cents — expected monthly revenue
+  probability    Int?       // 0-100
+  assignedTo     String?    // admin user id
+  notes          String?    @db.Text
+  nextAction     String?
+  nextActionDue  DateTime?
+  closedAt       DateTime?
+  closedReason   String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@map("sales_leads")
+  @@index([stage])
+  @@index([assignedTo])
+}
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum LeadPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ─── CRM: Communication Preferences ─────────────────────────────────────────
+
+model CommunicationPreference {
+  userId          String   @id
+  transactionalEmail Boolean @default(true)
+  marketingEmail  Boolean  @default(true)
+  sms             Boolean  @default(false)
+  phoneContact    Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+
+  @@map("communication_preferences")
+}

@@ -120,6 +120,88 @@ function box(inner: string): string {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+// Template: Admin Message — generic wrapper for one-off outbound from admin
+// ──────────────────────────────────────────────────────────────────────────
+
+export function adminMessage(args: {
+  subject: string
+  body: string // raw HTML or plain text (newlines preserved)
+  recipientName?: string | null
+}) {
+  const { subject, body, recipientName } = args
+
+  // Detect if body is already HTML (has any tags). If not, escape + wrap in <p>.
+  const looksLikeHtml = /<[a-z][\s\S]*>/i.test(body)
+  const safeBody = looksLikeHtml
+    ? body
+    : body
+        .split(/\n{2,}/)
+        .map(
+          (para) =>
+            `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#d1d5db;">${escapeHtml(
+              para,
+            ).replace(/\n/g, '<br/>')}</p>`,
+        )
+        .join('')
+
+  const greeting = recipientName
+    ? p(`Hi ${escapeHtml(recipientName)},`)
+    : ''
+
+  const inner = `
+    ${h1(subject)}
+    ${greeting}
+    ${safeBody}
+    ${divider()}
+    ${p(`Questions? Just reply — a real human reads every email.`)}
+  `
+
+  const textBody = looksLikeHtml
+    ? body.replace(/<[^>]+>/g, '').replace(/\s+\n/g, '\n').trim()
+    : body
+
+  const text = `${recipientName ? `Hi ${recipientName},\n\n` : ''}${textBody}
+
+— The Vitality Project
+`
+
+  return {
+    subject,
+    html: wrap(inner, { preheader: subject }),
+    text,
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Marketing Campaign wrapper — wraps admin-authored HTML in the branded
+// shell and appends a prominent unsubscribe link to the footer.
+// ──────────────────────────────────────────────────────────────────────────
+
+export function marketingWrapper(args: {
+  subject: string
+  body: string // admin-authored HTML (trusted)
+  unsubscribeUrl: string
+}): string {
+  const { subject, body, unsubscribeUrl } = args
+
+  const unsubscribeBlock = `
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;line-height:1.5;color:#9ca3af;">
+      You're receiving this marketing email from The Vitality Project.<br/>
+      <a href="${unsubscribeUrl}" style="color:#8193f8;text-decoration:underline;font-weight:600;">Unsubscribe</a>
+      &nbsp;·&nbsp;
+      <a href="${APP_URL}/account/settings" style="color:#8193f8;text-decoration:underline;">Manage preferences</a>
+    </div>
+  `
+
+  const inner = `${body}\n${unsubscribeBlock}`
+
+  return wrap(inner, {
+    preheader: subject,
+    includeMarketingFooter: true,
+  })
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 // Template: Order Confirmation
 // ──────────────────────────────────────────────────────────────────────────
 

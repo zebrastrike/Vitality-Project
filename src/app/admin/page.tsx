@@ -1,9 +1,20 @@
+import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { formatPrice } from '@/lib/utils'
-import { ShoppingBag, Users, DollarSign, TrendingUp, Package, AlertCircle } from 'lucide-react'
+import { formatPrice, formatDate } from '@/lib/utils'
+import {
+  ShoppingBag,
+  Users,
+  DollarSign,
+  Package,
+  AlertCircle,
+  CheckSquare,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { InstallAppButton } from '@/components/admin/install-app-button'
 
-async function getDashboardStats() {
+async function getDashboardStats(adminUserId: string | null) {
   const [
     totalOrders,
     totalRevenue,
@@ -11,6 +22,7 @@ async function getDashboardStats() {
     totalProducts,
     recentOrders,
     lowStockProducts,
+    myTasks,
   ] = await Promise.all([
     prisma.order.count({ where: { paymentStatus: 'PAID' } }),
     prisma.order.aggregate({ where: { paymentStatus: 'PAID' }, _sum: { total: true } }),
@@ -26,6 +38,16 @@ async function getDashboardStats() {
       take: 5,
       orderBy: { inventory: 'asc' },
     }),
+    adminUserId
+      ? prisma.adminTask.findMany({
+          where: {
+            assignedTo: adminUserId,
+            status: { in: ['PENDING', 'IN_PROGRESS'] },
+          },
+          orderBy: [{ priority: 'desc' }, { dueAt: 'asc' }],
+          take: 6,
+        })
+      : Promise.resolve([]),
   ])
 
   return {
@@ -35,11 +57,13 @@ async function getDashboardStats() {
     totalProducts,
     recentOrders,
     lowStockProducts,
+    myTasks,
   }
 }
 
 export default async function AdminDashboard() {
-  const stats = await getDashboardStats()
+  const session = await getServerSession(authOptions)
+  const stats = await getDashboardStats(session?.user?.id ?? null)
 
   const statCards = [
     { label: 'Total Revenue', value: formatPrice(stats.totalRevenue), icon: DollarSign, color: 'text-emerald-400' },
@@ -124,6 +148,53 @@ export default async function AdminDashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Your Open Tasks */}
+      <div className="glass rounded-2xl p-6 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold flex items-center gap-2">
+            <CheckSquare className="w-4 h-4 text-purple-400" /> Your Open Tasks
+          </h2>
+          <Link
+            href="/admin/tasks"
+            className="text-xs text-brand-400 hover:text-brand-300"
+          >
+            View all →
+          </Link>
+        </div>
+        {stats.myTasks.length === 0 ? (
+          <p className="text-white/30 text-sm">
+            Nothing on your plate right now.
+          </p>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {stats.myTasks.map((t) => (
+              <div
+                key={t.id}
+                className="py-2.5 flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{t.title}</p>
+                  <p className="text-xs text-white/40">
+                    {t.dueAt ? `Due ${formatDate(t.dueAt)}` : 'No due date'}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    t.priority === 'URGENT' || t.priority === 'HIGH'
+                      ? 'danger'
+                      : t.priority === 'LOW'
+                        ? 'default'
+                        : 'info'
+                  }
+                >
+                  {t.priority}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
