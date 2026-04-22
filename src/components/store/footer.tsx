@@ -21,7 +21,7 @@ export function Footer() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <Image src="/logo-white.png" alt="The Vitality Project" width={160} height={160} className="h-12 w-auto object-contain mb-3" />
+            <Image src="/logo-white.png" alt="The Vitality Project" width={160} height={160} className="h-12 w-auto object-contain mb-3" style={{ mixBlendMode: 'lighten' }} />
             <p className="text-white/40 text-sm max-w-xs">
               Premium quality research compounds sourced and fulfilled with complete data privacy.
             </p>
