@@ -3,8 +3,10 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { randomBytes } from 'crypto'
 import { z } from 'zod'
+import { cookies } from 'next/headers'
 import { sendEmail } from '@/lib/email'
 import { welcomeEmail, emailVerification } from '@/lib/email-templates'
+import { TRAINER_ATTRIBUTION_COOKIE, attributeUserToTrainer } from '@/lib/trainer'
 
 const schema = z.object({
   name: z.string().min(2).max(100),
@@ -33,6 +35,21 @@ export async function POST(req: NextRequest) {
         verifyToken,
       },
     })
+
+    // Trainer attribution (if visitor arrived via /join/<code>) — non-blocking
+    try {
+      const cookieStore = await cookies()
+      const trainerCode = cookieStore.get(TRAINER_ATTRIBUTION_COOKIE)?.value
+      if (trainerCode) {
+        await attributeUserToTrainer(user.id, trainerCode)
+        // Clear the cookie so it doesn't auto-attribute future signups on
+        // this device (e.g. spouse signing up next)
+        cookieStore.delete(TRAINER_ATTRIBUTION_COOKIE)
+      }
+    } catch (err) {
+      console.error('Trainer attribution on signup failed:', err)
+      // Never block account creation on attribution
+    }
 
     // Fire-and-forget — never block the signup flow on email delivery
     void (async () => {

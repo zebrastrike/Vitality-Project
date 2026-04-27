@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { sendEmail } from '@/lib/email'
 import { staffInvite } from '@/lib/email-templates'
+import { generateUniqueTrainerCode } from '@/lib/trainer'
 
 async function getOwnerOrAdmin(userId: string) {
   return prisma.orgMember.findFirst({
@@ -116,11 +117,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Auto-generate a personal referral code so the new member can attribute
+    // customer signups to themselves via /join/<code>. Ownerless ADMINs get
+    // codes too — gives them a working invite link without an extra step.
+    const referralCode = await generateUniqueTrainerCode(name)
+
     const member = await prisma.orgMember.create({
       data: {
         organizationId: membership.organizationId,
         userId: user.id,
         role: role as any,
+        referralCode,
       },
     })
 

@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit'
 import { sendEmail } from '@/lib/email'
 import { gymOwnerInvite } from '@/lib/email-templates'
 import { slugify } from '@/lib/utils'
+import { generateUniqueTrainerCode } from '@/lib/trainer'
 import { randomBytes } from 'crypto'
 import { z } from 'zod'
 import type { OrgType } from '@prisma/client'
@@ -129,11 +130,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    const ownerCode = await generateUniqueTrainerCode(ownerName)
     await tx.orgMember.create({
       data: {
         organizationId: org.id,
         userId: user.id,
         role: 'OWNER',
+        referralCode: ownerCode,
       },
     })
 

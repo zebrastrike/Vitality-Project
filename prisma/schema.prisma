@@ -103,11 +103,19 @@ model OrgMember {
   role           OrgMemberRole
   locationId     String?
 
+  // Personal trainer/coach referral code — used by /join?t=<code> to attribute
+  // new customer signups to this trainer. Optional because OWNER/ADMIN don't
+  // typically need one; auto-generated for STAFF/COACH/DOCTOR on creation.
+  referralCode   String?      @unique
+
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   location       Location?    @relation(fields: [locationId], references: [id])
 
+  attributedClients OrgClient[] @relation("TrainerAttributedClients")
+
   @@unique([organizationId, userId])
+  @@index([referralCode])
   @@map("org_members")
 }
 
@@ -118,12 +126,18 @@ model OrgClient {
   locationId     String?
   status         ClientStatus @default(ACTIVE)
 
+  // Trainer / coach attribution — which OrgMember "owns" this client.
+  // Lifetime — set on first attribution and survives unless admin reassigns.
+  trainerOrgMemberId String?
+  trainer            OrgMember? @relation("TrainerAttributedClients", fields: [trainerOrgMemberId], references: [id], onDelete: SetNull)
+
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   location       Location?    @relation(fields: [locationId], references: [id])
   orders         Order[]
 
   @@unique([organizationId, userId])
+  @@index([trainerOrgMemberId])
   @@map("org_clients")
 }
 

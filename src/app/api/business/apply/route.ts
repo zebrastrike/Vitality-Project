@@ -4,6 +4,7 @@ import { slugify } from '@/lib/utils'
 import { sendEmail } from '@/lib/email'
 import { newBusinessApplication } from '@/lib/email-templates'
 import { createAdminNotification } from '@/lib/notifications'
+import { generateUniqueTrainerCode } from '@/lib/trainer'
 
 export async function POST(req: NextRequest) {
   try {
@@ -74,12 +75,14 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create owner membership
+    // Create owner membership with auto-generated personal referral code
+    const ownerCode = await generateUniqueTrainerCode(contactName)
     await prisma.orgMember.create({
       data: {
         organizationId: organization.id,
         userId: user.id,
         role: 'OWNER',
+        referralCode: ownerCode,
       },
     })
 
