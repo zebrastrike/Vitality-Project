@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-export function ResetPasswordForm({ token }: { token: string }) {
+export function ResetPasswordForm({ token, isInvite = false }: { token: string; isInvite?: boolean }) {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -47,7 +47,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (done) {
     return (
       <div className="text-center space-y-4">
-        <p className="text-white">Password updated.</p>
+        <p className="text-white">{isInvite ? 'Account activated.' : 'Password updated.'}</p>
         <p className="text-sm text-white/40">Redirecting to sign in…</p>
       </div>
     )
@@ -56,7 +56,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <Input
-        label="New password"
+        label={isInvite ? 'Choose a password' : 'New password'}
         type="password"
         required
         value={password}
@@ -64,7 +64,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         placeholder="••••••••"
       />
       <Input
-        label="Confirm new password"
+        label={isInvite ? 'Confirm password' : 'Confirm new password'}
         type="password"
         required
         value={confirm}
@@ -73,16 +73,18 @@ export function ResetPasswordForm({ token }: { token: string }) {
         error={error}
       />
       <Button type="submit" loading={loading} className="w-full" size="lg">
-        Update password
+        {isInvite ? 'Activate account' : 'Update password'}
       </Button>
-      <p className="text-center text-sm text-white/40">
-        <Link
-          href="/auth/reset-password"
-          className="text-brand-400 hover:text-brand-300"
-        >
-          Request a new link
-        </Link>
-      </p>
+      {!isInvite && (
+        <p className="text-center text-sm text-white/40">
+          <Link
+            href="/auth/reset-password"
+            className="text-brand-400 hover:text-brand-300"
+          >
+            Request a new link
+          </Link>
+        </p>
+      )}
     </form>
   )
 }

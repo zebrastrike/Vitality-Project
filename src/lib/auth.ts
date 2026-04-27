@@ -80,17 +80,63 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      // Initial sign-in — pull base claims off the user object
       if (user) {
         token.id = user.id
         token.role = (user as any).role
       }
+
+      // Enrich with org context. Done on initial sign-in AND whenever the
+      // session is updated (so flipping owner roles in another tab refreshes
+      // here on next request). Cached on the token between requests.
+      if (user || trigger === 'update' || !('organizationId' in token)) {
+        try {
+          const userId = (token.id as string) || (user as any)?.id
+          if (userId) {
+            const orgMember = await prisma.orgMember.findFirst({
+              where: { userId },
+              // OrgMember enum order is OWNER, ADMIN, STAFF, COACH, DOCTOR —
+              // ascending sort puts the highest privilege first
+              orderBy: { role: 'asc' },
+              select: {
+                organizationId: true,
+                role: true,
+                organization: { select: { name: true, slug: true, status: true } },
+              },
+            })
+            if (orgMember) {
+              token.organizationId = orgMember.organizationId
+              token.organizationName = orgMember.organization.name
+              token.organizationSlug = orgMember.organization.slug
+              token.organizationStatus = orgMember.organization.status
+              token.orgMemberRole = orgMember.role
+            } else {
+              token.organizationId = null
+              token.organizationName = null
+              token.organizationSlug = null
+              token.organizationStatus = null
+              token.orgMemberRole = null
+            }
+          }
+        } catch (err) {
+          console.error('JWT org-context lookup failed:', err)
+        }
+      }
+
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        // Mirror org context to the session so client + server components
+        // can read it without extra queries
+        ;(session.user as any).organizationId = (token as any).organizationId ?? null
+        ;(session.user as any).organizationName = (token as any).organizationName ?? null
+        ;(session.user as any).organizationSlug = (token as any).organizationSlug ?? null
+        ;(session.user as any).organizationStatus = (token as any).organizationStatus ?? null
+        ;(session.user as any).orgMemberRole = (token as any).orgMemberRole ?? null
       }
       return session
     },

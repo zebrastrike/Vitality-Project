@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { slugify } from '@/lib/utils'
-import bcrypt from 'bcryptjs'
 import { sendEmail } from '@/lib/email'
 import { newBusinessApplication } from '@/lib/email-templates'
 import { createAdminNotification } from '@/lib/notifications'
@@ -32,16 +31,15 @@ export async function POST(req: NextRequest) {
     })
 
     if (!user) {
-      // Create user with a temporary password hash
-      const tempPassword = await bcrypt.hash(
-        Math.random().toString(36).slice(2) + Date.now().toString(36),
-        10
-      )
+      // Create user without a password — admin will trigger an activation
+      // email (with a 7-day reset token) when they approve the application.
+      // No plaintext-credential leak; user sets their own password via the
+      // standard reset-password flow.
       user = await prisma.user.create({
         data: {
           email: email.toLowerCase(),
           name: contactName,
-          passwordHash: tempPassword,
+          passwordHash: null,
           role: 'CUSTOMER',
         },
       })

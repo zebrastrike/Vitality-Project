@@ -545,6 +545,43 @@ Browse: ${APP_URL}/products
 // Template: Staff Invite
 // ──────────────────────────────────────────────────────────────────────────
 
+export function gymOwnerInvite(args: {
+  name: string
+  orgName: string
+  orgType: string
+  inviteUrl: string
+  inviterName?: string
+}) {
+  const { name, orgName, orgType, inviteUrl, inviterName } = args
+  const friendlyType = orgType.toLowerCase().replace('_', ' ')
+  const inviter = inviterName ? escapeHtml(inviterName) : 'The Vitality Project team'
+
+  const body = `
+    ${h1(`You're invited to set up ${escapeHtml(orgName)}`)}
+    ${p(`Hi ${escapeHtml(name)}, ${inviter} has invited you to manage <strong style="color:#ffffff;">${escapeHtml(orgName)}</strong> on The Vitality Project — your ${escapeHtml(friendlyType)}'s back-office portal.`)}
+    ${p(`Activate your account to start adding trainers, managing clients, configuring your kiosk, and seeing commission reports.`)}
+    ${button('Activate your account', inviteUrl)}
+    ${p(`This invitation expires in 7 days. Reply to this email if you weren't expecting it.`)}
+  `
+
+  const text = `You're invited to set up ${orgName}
+
+Hi ${name}, ${inviterName || 'The Vitality Project team'} has invited you to manage ${orgName} on The Vitality Project as the owner of this ${friendlyType}.
+
+Activate your account: ${inviteUrl}
+
+This invitation expires in 7 days.
+
+— The Vitality Project
+`
+
+  return {
+    subject: `Activate your account: ${orgName} on The Vitality Project`,
+    html: wrap(body, { preheader: `You've been invited to manage ${orgName}.` }),
+    text,
+  }
+}
+
 export function staffInvite(args: {
   name: string
   orgName: string
