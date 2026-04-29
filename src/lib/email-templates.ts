@@ -1017,3 +1017,166 @@ Review: ${APP_URL}/admin/organizations
     text,
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Template: Fulfillment Request → supplier (drop-ship workflow)
+//
+// Sent to orders@integrativepracticesolutions.com (or whatever
+// FULFILLMENT_EMAIL is set to in env) for every Fulfillment we create.
+// Replaces the NetSuite API push until we hit the volume threshold that
+// unlocks API access. Pricing on the customer-facing site is unaffected
+// — this email carries the DROP-SHIP rate (our cost) for invoicing.
+// ──────────────────────────────────────────────────────────────────────────
+
+export function fulfillmentRequest(args: {
+  orderNumber: string
+  fulfillmentId: string
+  facilityName: string
+  shipTo: {
+    name: string
+    line1: string
+    line2?: string | null
+    city: string
+    state: string
+    zip: string
+    country: string
+    phone?: string | null
+  }
+  customerEmail: string
+  items: Array<{
+    sku: string | null
+    name: string
+    quantity: number
+    /** Drop-ship rate per unit, in cents. */
+    unitCostCents: number | null
+  }>
+  /** True when the fulfillment contains exactly one peptide line item.
+   *  Surfaces in the subject + a banner so the supplier can route to
+   *  the single-peptide drop-ship pipeline. */
+  isSinglePeptide: boolean
+  /** Optional special-handling instructions (cold-chain, signature, etc.) */
+  notes?: string
+}) {
+  const {
+    orderNumber,
+    fulfillmentId,
+    facilityName,
+    shipTo,
+    customerEmail,
+    items,
+    isSinglePeptide,
+    notes,
+  } = args
+
+  const fmt = (cents: number | null) =>
+    cents == null ? '—' : `$${(cents / 100).toFixed(2)}`
+  const lineTotal = (it: { quantity: number; unitCostCents: number | null }) =>
+    it.unitCostCents == null ? null : it.unitCostCents * it.quantity
+  const totalCostCents = items.reduce(
+    (sum, it) => sum + (lineTotal(it) ?? 0),
+    0,
+  )
+  const anyMissingCost = items.some((it) => it.unitCostCents == null)
+
+  const itemRows = items
+    .map(
+      (it) => `
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-family:monospace;font-size:12px;color:#d1d5db;">${escapeHtml(it.sku ?? '—')}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;">${escapeHtml(it.name)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:center;">${it.quantity}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:right;">${fmt(it.unitCostCents)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:right;">${fmt(lineTotal(it))}</td>
+        </tr>`,
+    )
+    .join('')
+
+  const singleBanner = isSinglePeptide
+    ? `<div style="background-color:rgba(99,112,242,0.12);border:1px solid rgba(99,112,242,0.35);border-radius:10px;padding:12px 14px;margin:0 0 18px 0;font-size:13px;color:#aab4ff;">
+         <strong style="color:#c5cdff;">Single-peptide order</strong> — route through the drop-ship rate pipeline.
+       </div>`
+    : ''
+
+  const noteBlock = notes
+    ? box(`<div style="font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Special handling</div><div style="font-size:14px;color:#e5e7eb;">${escapeHtml(notes)}</div>`)
+    : ''
+
+  const body = `
+    ${h1(`New order to fulfill — ${orderNumber}`)}
+    ${singleBanner}
+    ${p(`Facility: <strong style="color:#ffffff;">${escapeHtml(facilityName)}</strong> · Fulfillment <code style="font-family:monospace;color:#aab4ff;">${escapeHtml(fulfillmentId)}</code>`)}
+
+    ${box(`
+      <div style="font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Ship to</div>
+      <div style="font-size:14px;color:#ffffff;font-weight:600;">${escapeHtml(shipTo.name)}</div>
+      <div style="font-size:13px;color:#d1d5db;margin-top:4px;">
+        ${escapeHtml(shipTo.line1)}${shipTo.line2 ? '<br/>' + escapeHtml(shipTo.line2) : ''}<br/>
+        ${escapeHtml(shipTo.city)}, ${escapeHtml(shipTo.state)} ${escapeHtml(shipTo.zip)}<br/>
+        ${escapeHtml(shipTo.country)}${shipTo.phone ? '<br/>' + escapeHtml(shipTo.phone) : ''}
+      </div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:10px;">Customer: ${escapeHtml(customerEmail)}</div>
+    `)}
+
+    <div style="margin:0 0 8px 0;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Items (drop-ship rates)</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;margin:0 0 16px 0;">
+      <thead>
+        <tr>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">SKU</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Item</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Qty</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Unit cost</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Line total</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="padding:12px;text-align:right;font-size:13px;font-weight:600;color:#9ca3af;">Total drop-ship cost</td>
+          <td style="padding:12px;text-align:right;font-size:14px;font-weight:700;color:#ffffff;">${fmt(totalCostCents)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    ${anyMissingCost ? `<div style="font-size:12px;color:#f59e0b;margin:0 0 14px 0;">⚠ One or more items are missing a drop-ship rate in our catalog. Please confirm pricing back to us before invoicing.</div>` : ''}
+
+    ${noteBlock}
+
+    ${p(`Reply to this email with tracking info as soon as the package ships and we'll relay it to the customer automatically.`)}
+  `
+
+  const itemsText = items
+    .map(
+      (it) =>
+        `  - ${it.sku ?? '—'}  ${it.name}  × ${it.quantity}  @ ${fmt(it.unitCostCents)} ea = ${fmt(lineTotal(it))}`,
+    )
+    .join('\n')
+
+  const text = `New order to fulfill — ${orderNumber}${isSinglePeptide ? '  [SINGLE PEPTIDE — DROP-SHIP RATE]' : ''}
+Facility: ${facilityName}
+Fulfillment: ${fulfillmentId}
+
+Ship to:
+${shipTo.name}
+${shipTo.line1}${shipTo.line2 ? '\n' + shipTo.line2 : ''}
+${shipTo.city}, ${shipTo.state} ${shipTo.zip}
+${shipTo.country}${shipTo.phone ? '\nPhone: ' + shipTo.phone : ''}
+Customer: ${customerEmail}
+
+Items (drop-ship rates):
+${itemsText}
+TOTAL: ${fmt(totalCostCents)}
+${anyMissingCost ? '\n⚠ One or more items are missing a drop-ship rate — please confirm before invoicing.\n' : ''}${notes ? `\nSpecial handling: ${notes}\n` : ''}
+Reply with tracking info when shipped.
+
+— The Vitality Project
+`
+
+  const subjectPrefix = isSinglePeptide ? '[Single peptide] ' : ''
+  return {
+    subject: `${subjectPrefix}New order ${orderNumber} → ${facilityName}`,
+    html: wrap(body, {
+      preheader: `${items.length} item${items.length === 1 ? '' : 's'} for ${shipTo.name} (${shipTo.city}, ${shipTo.state}). Total cost ${fmt(totalCostCents)}.`,
+    }),
+    text,
+  }
+}
