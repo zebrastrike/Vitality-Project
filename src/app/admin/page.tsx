@@ -10,11 +10,20 @@ import {
   Package,
   AlertCircle,
   CheckSquare,
+  TrendingUp,
+  Receipt,
+  Percent,
+  RefreshCcw,
+  Wallet,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { InstallAppButton } from '@/components/admin/install-app-button'
 
 async function getDashboardStats(adminUserId: string | null) {
+  // Month-to-date window for the P&L card.
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
   const [
     totalOrders,
     totalRevenue,
@@ -23,6 +32,8 @@ async function getDashboardStats(adminUserId: string | null) {
     recentOrders,
     lowStockProducts,
     myTasks,
+    monthOrders,
+    monthRefunds,
   ] = await Promise.all([
     prisma.order.count({ where: { paymentStatus: 'PAID' } }),
     prisma.order.aggregate({ where: { paymentStatus: 'PAID' }, _sum: { total: true } }),
@@ -48,7 +59,57 @@ async function getDashboardStats(adminUserId: string | null) {
           take: 6,
         })
       : Promise.resolve([]),
+    // Month-to-date paid orders, with item product cost for COGS rollup.
+    prisma.order.findMany({
+      where: {
+        paymentStatus: 'PAID',
+        createdAt: { gte: monthStart },
+      },
+      select: {
+        total: true,
+        subtotal: true,
+        discount: true,
+        items: {
+          select: {
+            quantity: true,
+            product: { select: { cost: true } },
+          },
+        },
+      },
+    }),
+    // Refund cost MTD — credits issued tagged REFUND in store_credit_txn,
+    // which is what processRefund() writes today. Future Refund model rolls
+    // into the same number once added.
+    prisma.storeCreditTxn.aggregate({
+      where: { type: 'REFUND', createdAt: { gte: monthStart } },
+      _sum: { amount: true },
+    }).catch(() => ({ _sum: { amount: 0 } as { amount: number | null } })),
   ])
+
+  // ── P&L MTD rollup ──────────────────────────────────────────────────────
+  let mtdRevenue = 0
+  let mtdCogs = 0
+  let mtdDiscount = 0
+  for (const o of monthOrders) {
+    mtdRevenue += o.total
+    mtdDiscount += o.discount
+    for (const it of o.items) {
+      const unitCost = it.product?.cost ?? 0
+      mtdCogs += unitCost * it.quantity
+    }
+  }
+  // store_credit_txn.amount is stored as a positive cent value; treat as cost.
+  const mtdRefunds = Math.abs((monthRefunds._sum.amount ?? 0))
+  const mtdGrossProfit = mtdRevenue - mtdCogs - mtdRefunds
+  const mtdMargin = mtdRevenue > 0 ? (mtdGrossProfit / mtdRevenue) * 100 : 0
+  const mtdAov = monthOrders.length > 0 ? Math.round(mtdRevenue / monthOrders.length) : 0
+  // Items where Product.cost wasn't populated — surface as a data-quality flag
+  // so Edward knows margin is understated (treats unknown cost as zero).
+  const mtdItemsWithoutCost = monthOrders.reduce(
+    (n, o) => n + o.items.filter((it) => it.product?.cost == null).length,
+    0,
+  )
+  const mtdItemsTotal = monthOrders.reduce((n, o) => n + o.items.length, 0)
 
   return {
     totalOrders,
@@ -58,6 +119,18 @@ async function getDashboardStats(adminUserId: string | null) {
     recentOrders,
     lowStockProducts,
     myTasks,
+    pnl: {
+      revenue: mtdRevenue,
+      cogs: mtdCogs,
+      grossProfit: mtdGrossProfit,
+      margin: mtdMargin,
+      aov: mtdAov,
+      orders: monthOrders.length,
+      discount: mtdDiscount,
+      refunds: mtdRefunds,
+      itemsWithoutCost: mtdItemsWithoutCost,
+      itemsTotal: mtdItemsTotal,
+    },
   }
 }
 
@@ -95,6 +168,84 @@ export default async function AdminDashboard() {
             <div className="text-2xl font-bold">{card.value}</div>
           </div>
         ))}
+      </div>
+
+      {/* P&L this month — plain English business-owner view */}
+      <div className="glass rounded-2xl p-6 mb-8">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="font-semibold flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              Profit &amp; Loss — this month
+            </h2>
+            <p className="text-xs text-white/40 mt-0.5">
+              {stats.pnl.orders} paid order{stats.pnl.orders === 1 ? '' : 's'}
+              {' · '}month-to-date
+            </p>
+          </div>
+          {stats.pnl.itemsWithoutCost > 0 && (
+            <div className="text-right text-[11px] text-amber-400/80">
+              <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
+              {stats.pnl.itemsWithoutCost}/{stats.pnl.itemsTotal} items missing cost
+              <div className="text-[10px] text-white/40">
+                Margin understated until <Link href="/admin/products" className="text-amber-300 hover:text-amber-200 underline">cost is filled in</Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+          {/* Money in */}
+          <div>
+            <div className="text-xs text-white/40 mb-1 flex items-center gap-1.5">
+              <DollarSign className="w-3 h-3" /> Money in
+            </div>
+            <div className="text-xl font-bold text-emerald-400">{formatPrice(stats.pnl.revenue)}</div>
+            <div className="text-[10px] text-white/40 mt-0.5">customer payments</div>
+          </div>
+          {/* Cost of goods */}
+          <div>
+            <div className="text-xs text-white/40 mb-1 flex items-center gap-1.5">
+              <Package className="w-3 h-3" /> Cost of goods
+            </div>
+            <div className="text-xl font-bold text-rose-400">−{formatPrice(stats.pnl.cogs)}</div>
+            <div className="text-[10px] text-white/40 mt-0.5">what you paid suppliers</div>
+          </div>
+          {/* Refunds */}
+          <div>
+            <div className="text-xs text-white/40 mb-1 flex items-center gap-1.5">
+              <RefreshCcw className="w-3 h-3" /> Refunds
+            </div>
+            <div className="text-xl font-bold text-rose-400">−{formatPrice(stats.pnl.refunds)}</div>
+            <div className="text-[10px] text-white/40 mt-0.5">money back to customers</div>
+          </div>
+          {/* Profit */}
+          <div className="border-l border-white/10 pl-4">
+            <div className="text-xs text-white/40 mb-1 flex items-center gap-1.5">
+              <Wallet className="w-3 h-3" /> What you keep
+            </div>
+            <div className={`text-xl font-bold ${stats.pnl.grossProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {formatPrice(stats.pnl.grossProfit)}
+            </div>
+            <div className="text-[10px] text-white/40 mt-0.5">
+              {stats.pnl.margin.toFixed(1)}% margin
+            </div>
+          </div>
+        </div>
+
+        {/* Secondary row: discount + AOV */}
+        <div className="flex items-center gap-6 text-xs text-white/50 pt-4 border-t border-white/5">
+          <div className="flex items-center gap-1.5">
+            <Receipt className="w-3 h-3 text-amber-400" />
+            <span>Average order:</span>
+            <span className="font-semibold text-white">{formatPrice(stats.pnl.aov)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Percent className="w-3 h-3 text-purple-400" />
+            <span>Discount given:</span>
+            <span className="font-semibold text-white">{formatPrice(stats.pnl.discount)}</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
