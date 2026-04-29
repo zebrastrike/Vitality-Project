@@ -1180,3 +1180,80 @@ Reply with tracking info when shipped.
     text,
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Template: Abandoned Cart Recovery
+//
+// Sent to logged-in customers whose cart sat idle 1+ hours but is still
+// less than 7 days old (so we don't surface a stale week-old cart). The
+// abandoned-cart job dedupes by checking for a recent OutboundMessage
+// with subject prefix "[abandoned-cart]".
+// ──────────────────────────────────────────────────────────────────────────
+
+export function abandonedCart(args: {
+  name: string
+  items: Array<{ name: string; quantity: number; price: number }> // price in cents
+  cartUrl: string
+  unsubscribeUrl?: string
+}) {
+  const { name, items, cartUrl, unsubscribeUrl } = args
+  const subtotal = items.reduce((sum, it) => sum + it.price * it.quantity, 0)
+
+  const itemRows = items
+    .map(
+      (it) => `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:14px;color:#e5e7eb;">${escapeHtml(it.name)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#9ca3af;text-align:center;">${it.quantity}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:right;">$${(it.price / 100).toFixed(2)}</td>
+        </tr>`,
+    )
+    .join('')
+
+  const inner = `
+    ${h1(`You left something behind, ${escapeHtml(name)}`)}
+    ${p(`Your cart is waiting. We've held your items, but they won't last forever — popular peptides move fast.`)}
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;margin:16px 0;">
+      <thead>
+        <tr>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Item</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Qty</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Price</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" style="padding:12px;text-align:right;font-size:13px;font-weight:600;color:#9ca3af;">Subtotal</td>
+          <td style="padding:12px;text-align:right;font-size:14px;font-weight:700;color:#ffffff;">$${(subtotal / 100).toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    ${button('Complete your order', cartUrl)}
+    ${p(`Questions? Just reply to this email.`)}
+  `
+
+  const text = `Hi ${name},
+
+You left some peptides in your cart at The Vitality Project. We've held them for you, but popular items move fast.
+
+${items.map((i) => `  - ${i.name} × ${i.quantity}  $${(i.price / 100).toFixed(2)}`).join('\n')}
+
+Subtotal: $${(subtotal / 100).toFixed(2)}
+
+Complete your order: ${cartUrl}
+
+— The Vitality Project
+${unsubscribeUrl ? `\nUnsubscribe: ${unsubscribeUrl}\n` : ''}`
+
+  return {
+    subject: `[abandoned-cart] You left ${items.length} item${items.length === 1 ? '' : 's'} in your cart`,
+    html: wrap(inner, {
+      preheader: `Your ${items.length} item${items.length === 1 ? '' : 's'} are waiting — $${(subtotal / 100).toFixed(2)}`,
+      includeMarketingFooter: true,
+    }),
+    text,
+  }
+}

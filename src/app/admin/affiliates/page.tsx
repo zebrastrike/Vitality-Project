@@ -54,8 +54,13 @@ export default async function AdminAffiliatesPage() {
               return (
                 <tr key={aff.id} className="hover:bg-white/2 transition-colors">
                   <td className="px-5 py-4">
-                    <p className="text-sm font-medium">{aff.user.name}</p>
-                    <p className="text-xs text-white/40">{aff.user.email}</p>
+                    <a
+                      href={`/admin/affiliates/${aff.id}`}
+                      className="block hover:opacity-80 transition-opacity"
+                    >
+                      <p className="text-sm font-medium">{aff.user.name}</p>
+                      <p className="text-xs text-white/40">{aff.user.email}</p>
+                    </a>
                   </td>
                   <td className="px-5 py-4">
                     <code className="text-xs bg-dark-700 px-2 py-1 rounded text-brand-400">{aff.code}</code>

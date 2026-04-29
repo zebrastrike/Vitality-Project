@@ -28,5 +28,16 @@ export async function GET(
     },
   })
 
-  return NextResponse.redirect(new URL('/newsletter/confirmed', origin))
+  // Mark this browser as a known subscriber so the exit-intent modal
+  // stops pestering them on this device. 1-year cookie since they
+  // explicitly opted in. The exit-intent gate just checks for presence
+  // — value doesn't matter, but `1` keeps it short.
+  const res = NextResponse.redirect(new URL('/newsletter/confirmed', origin))
+  res.cookies.set('vp_news', '1', {
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  })
+  return res
 }

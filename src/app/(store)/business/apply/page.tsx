@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { TurnstileWidget } from '@/components/store/turnstile-widget'
 
 const ORG_TYPES = [
   { value: 'GYM', label: 'Gym / Fitness Studio' },
@@ -15,6 +16,7 @@ export default function BusinessApplyPage() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -30,6 +32,7 @@ export default function BusinessApplyPage() {
       phone: form.get('phone'),
       website: form.get('website'),
       reason: form.get('reason'),
+      turnstileToken,
     }
 
     try {
@@ -158,6 +161,11 @@ export default function BusinessApplyPage() {
               {error}
             </div>
           )}
+
+          {/* Bot protection — invisible until Cloudflare flags suspicious
+              traffic. No-ops in dev when NEXT_PUBLIC_TURNSTILE_SITE_KEY
+              isn't set; the server side fails-open in that case too. */}
+          <TurnstileWidget onToken={setTurnstileToken} onExpired={() => setTurnstileToken(null)} />
 
           <Button type="submit" size="lg" loading={loading} className="w-full">
             Submit Application
