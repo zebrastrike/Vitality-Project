@@ -5,6 +5,7 @@ import './globals.css'
 import { Providers } from './providers'
 import { VitalityVeins } from '@/components/vitality-veins'
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration'
+import { ExitIntentModal } from '@/components/store/exit-intent-modal'
 
 // Marketing pixels — env-gated. Set the IDs in production to enable; dev
 // stays clean. Public-prefixed because they need to land in the bundle.
@@ -114,6 +115,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <VitalityVeins />
           {children}
+          <ExitIntentModal />
         </Providers>
         <ServiceWorkerRegistration />
       </body>

@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { CheckCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { prisma } from '@/lib/prisma'
+import { PurchasePixel } from '@/components/store/purchase-pixel'
 
 interface Props {
   searchParams: Promise<{ order?: string }>
@@ -8,10 +10,32 @@ interface Props {
 
 export default async function ConfirmationPage({ searchParams }: Props) {
   const params = await searchParams
-  const orderNumber = params.order ?? 'VP-XXXXXX'
+  const orderNumber = params.order
+
+  // Look up the order so we can fire conversion pixels with real value.
+  // Fail-safe: confirmation still renders if the order isn't found
+  // (e.g. user landed without a query param) — just no pixel firing.
+  const order = orderNumber
+    ? await prisma.order.findUnique({
+        where: { orderNumber },
+        select: { total: true, items: { select: { quantity: true } } },
+      })
+    : null
+  const itemCount = order?.items.reduce((n, it) => n + it.quantity, 0) ?? 0
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+      {/* Conversion events for Meta Pixel / GA4 / TikTok Pixel — fires once
+          per orderNumber via sessionStorage dedupe. No-ops when pixel envs
+          aren't set or when no order is found. */}
+      {order && orderNumber && (
+        <PurchasePixel
+          orderNumber={orderNumber}
+          totalCents={order.total}
+          itemCount={itemCount}
+        />
+      )}
+
       <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
         <CheckCircle className="w-10 h-10 text-emerald-400" />
       </div>
@@ -19,7 +43,7 @@ export default async function ConfirmationPage({ searchParams }: Props) {
       <h1 className="text-3xl font-bold mb-2">Payment Successful!</h1>
       <p className="text-white/50 mb-2">Your order has been confirmed and is being processed.</p>
       <div className="inline-block bg-dark-700 rounded-xl px-5 py-2 font-mono font-bold text-brand-400 text-lg mb-10">
-        {orderNumber}
+        {orderNumber ?? 'Order not found — please check your email'}
       </div>
 
       <div className="glass rounded-2xl p-8 text-left mb-8">

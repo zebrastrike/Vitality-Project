@@ -59,6 +59,12 @@ model Organization {
   slug      String    @unique
   type      OrgType
   status    OrgStatus @default(ACTIVE)
+  // 4-6 digit PIN that protects the "Exit kiosk" button on this org's
+  // iPad displays. Null = exit is unprotected (default for orgs that
+  // haven't set one). Stored as plaintext intentionally — it's a curious-
+  // customer guard, not a security boundary; the real auth lives at
+  // /admin via NextAuth.
+  kioskPin  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

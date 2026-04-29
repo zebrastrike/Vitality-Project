@@ -6,6 +6,7 @@ import { newBusinessApplication } from '@/lib/email-templates'
 import { createAdminNotification } from '@/lib/notifications'
 import { generateUniqueTrainerCode } from '@/lib/trainer'
 import { checkRateLimit, tooManyRequests } from '@/lib/rate-limit'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 export async function POST(req: NextRequest) {
   // Tighter limit on B2B applications — they're meaningful records and
@@ -15,7 +16,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { businessName, type, contactName, email, phone, website, reason } = body
+    const { businessName, type, contactName, email, phone, website, reason, turnstileToken } = body
+
+    // Bot check — Turnstile widget produces turnstileToken on the client.
+    // No-ops in dev when TURNSTILE_SECRET_KEY isn't set.
+    const captchaOk = await verifyTurnstile(
+      turnstileToken,
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
+    )
+    if (!captchaOk) {
+      return NextResponse.json({ error: 'Verification failed. Please try again.' }, { status: 400 })
+    }
 
     if (!businessName || !type || !contactName || !email || !phone) {
       return NextResponse.json(
