@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
+import { checkRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import crypto from 'crypto'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
 
 export async function POST(req: NextRequest) {
+  // 5 signups per IP per minute is generous for legit users + tight for bots
+  // looking to seed our list with disposable addresses.
+  const rl = checkRateLimit(req, 'newsletter', { limit: 5, windowMs: 60_000 })
+  if (!rl.allowed) return tooManyRequests(rl.retryAfter)
+
   try {
     const body = await req.json().catch(() => ({}))
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''

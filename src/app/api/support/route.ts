@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { sendEmail } from '@/lib/email'
 import { supportTicketCreated } from '@/lib/email-templates'
 import { createAdminNotification } from '@/lib/notifications'
+import { checkRateLimit, tooManyRequests } from '@/lib/rate-limit'
 
 const schema = z.object({
   subject: z.string().min(2).max(200),
@@ -38,6 +39,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // 10 tickets per IP per 5 minutes — looser for logged-in users below.
+  const rl = checkRateLimit(req, 'support', { limit: 10, windowMs: 5 * 60_000 })
+  if (!rl.allowed) return tooManyRequests(rl.retryAfter)
+
   try {
     const session = await getServerSession(authOptions)
     const data = schema.parse(await req.json())

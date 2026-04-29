@@ -29,18 +29,41 @@ export async function POST(
 
     const order = await prisma.order.findUnique({
       where: { id },
-      include: { user: { select: { name: true, email: true } } },
+      include: {
+        user: { select: { name: true, email: true } },
+        refunds: { select: { amount: true, status: true } },
+      },
     })
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    if (amount > order.total) {
+    // Cap cumulative refunds at the order total so we can't refund more
+    // than the customer paid (e.g. across multiple partial refunds).
+    const alreadyRefunded = order.refunds
+      .filter((r) => r.status !== 'FAILED')
+      .reduce((sum, r) => sum + r.amount, 0)
+    const refundable = order.total - alreadyRefunded
+    if (amount > refundable) {
       return NextResponse.json(
-        { error: `Refund amount exceeds order total (${order.total / 100})` },
-        { status: 400 }
+        { error: `Refund amount exceeds remaining refundable balance ($${(refundable / 100).toFixed(2)})` },
+        { status: 400 },
       )
     }
+
+    // Create the canonical Refund row first, PENDING. This is the source
+    // of truth for the /admin P&L card. We update it to PROCESSED/FAILED
+    // once the downstream call returns.
+    const refundRow = await prisma.refund.create({
+      data: {
+        orderId: order.id,
+        amount,
+        method: refundMethod === 'store_credit' ? 'STORE_CREDIT' : 'CASH',
+        reason,
+        status: 'PENDING',
+        createdById: session.user.id,
+      },
+    })
 
     // Issue the refund
     let refundRef: string | null = null
@@ -68,6 +91,12 @@ export async function POST(
         reason,
       })
       if (!result.success) {
+        // Mark Refund row FAILED so the /admin/orders/[id] timeline shows
+        // the attempt + reason. P&L excludes FAILED rows.
+        await prisma.refund.update({
+          where: { id: refundRow.id },
+          data: { status: 'FAILED', reason: `${reason}\n[error: ${result.error ?? 'unknown'}]` },
+        })
         return NextResponse.json(
           { error: result.error ?? 'Payment processor refund failed' },
           { status: 502 }
@@ -76,8 +105,19 @@ export async function POST(
       refundRef = result.refundId ?? null
     }
 
+    // Mark Refund row PROCESSED with the external reference.
+    await prisma.refund.update({
+      where: { id: refundRow.id },
+      data: {
+        status: 'PROCESSED',
+        externalRef: refundRef,
+        processedAt: new Date(),
+      },
+    })
+
     // Update order payment status
-    const fullyRefunded = amount >= order.total
+    const newTotalRefunded = alreadyRefunded + amount
+    const fullyRefunded = newTotalRefunded >= order.total
     const nextPaymentStatus = fullyRefunded ? 'REFUNDED' : 'PARTIALLY_REFUNDED'
     const nextOrderStatus = fullyRefunded ? 'REFUNDED' : order.status
 

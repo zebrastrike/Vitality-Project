@@ -33,7 +33,10 @@ async function getDashboardStats(adminUserId: string | null) {
     lowStockProducts,
     myTasks,
     monthOrders,
-    monthRefunds,
+    monthRefundsRow,
+    monthLegacyRefunds,
+    topProductsRows,
+    topCustomersRows,
   ] = await Promise.all([
     prisma.order.count({ where: { paymentStatus: 'PAID' } }),
     prisma.order.aggregate({ where: { paymentStatus: 'PAID' }, _sum: { total: true } }),
@@ -77,13 +80,36 @@ async function getDashboardStats(adminUserId: string | null) {
         },
       },
     }),
-    // Refund cost MTD — credits issued tagged REFUND in store_credit_txn,
-    // which is what processRefund() writes today. Future Refund model rolls
-    // into the same number once added.
+    // Refund cost MTD. Two sources:
+    //   1. The first-class Refund model (cash + store-credit + manual)
+    //   2. Legacy StoreCreditTxn type=REFUND for any pre-Refund-model rows.
+    // We query both and add — Refund rows are authoritative going forward,
+    // StoreCreditTxn is the historical fallback.
+    prisma.refund.aggregate({
+      where: { createdAt: { gte: monthStart }, status: { not: 'FAILED' } },
+      _sum: { amount: true },
+    }).catch(() => ({ _sum: { amount: 0 } as { amount: number | null } })),
     prisma.storeCreditTxn.aggregate({
       where: { type: 'REFUND', createdAt: { gte: monthStart } },
       _sum: { amount: true },
     }).catch(() => ({ _sum: { amount: 0 } as { amount: number | null } })),
+    // Top 5 products MTD by gross revenue.
+    prisma.orderItem.groupBy({
+      by: ['productId', 'name'],
+      where: { order: { paymentStatus: 'PAID', createdAt: { gte: monthStart } } },
+      _sum: { total: true, quantity: true },
+      orderBy: { _sum: { total: 'desc' } },
+      take: 5,
+    }),
+    // Top 5 customers MTD by gross revenue.
+    prisma.order.groupBy({
+      by: ['email'],
+      where: { paymentStatus: 'PAID', createdAt: { gte: monthStart } },
+      _sum: { total: true },
+      _count: { _all: true },
+      orderBy: { _sum: { total: 'desc' } },
+      take: 5,
+    }),
   ])
 
   // ── P&L MTD rollup ──────────────────────────────────────────────────────
@@ -98,8 +124,11 @@ async function getDashboardStats(adminUserId: string | null) {
       mtdCogs += unitCost * it.quantity
     }
   }
-  // store_credit_txn.amount is stored as a positive cent value; treat as cost.
-  const mtdRefunds = Math.abs((monthRefunds._sum.amount ?? 0))
+  // Sum both refund sources (Refund model + legacy StoreCreditTxn) — both
+  // store positive cent values; treat as a cost line in P&L.
+  const mtdRefunds =
+    Math.abs(monthRefundsRow._sum.amount ?? 0) +
+    Math.abs(monthLegacyRefunds._sum.amount ?? 0)
   const mtdGrossProfit = mtdRevenue - mtdCogs - mtdRefunds
   const mtdMargin = mtdRevenue > 0 ? (mtdGrossProfit / mtdRevenue) * 100 : 0
   const mtdAov = monthOrders.length > 0 ? Math.round(mtdRevenue / monthOrders.length) : 0
@@ -111,6 +140,18 @@ async function getDashboardStats(adminUserId: string | null) {
   )
   const mtdItemsTotal = monthOrders.reduce((n, o) => n + o.items.length, 0)
 
+  const topProducts = topProductsRows.map((r) => ({
+    productId: r.productId,
+    name: r.name,
+    revenue: r._sum.total ?? 0,
+    units: r._sum.quantity ?? 0,
+  }))
+  const topCustomers = topCustomersRows.map((r) => ({
+    email: r.email,
+    revenue: r._sum.total ?? 0,
+    orders: r._count._all,
+  }))
+
   return {
     totalOrders,
     totalRevenue: totalRevenue._sum.total ?? 0,
@@ -119,6 +160,8 @@ async function getDashboardStats(adminUserId: string | null) {
     recentOrders,
     lowStockProducts,
     myTasks,
+    topProducts,
+    topCustomers,
     pnl: {
       revenue: mtdRevenue,
       cogs: mtdCogs,
@@ -298,6 +341,64 @@ export default async function AdminDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Top Products + Top Customers */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div className="glass rounded-2xl p-6">
+          <h2 className="font-semibold mb-4 flex items-center gap-2">
+            <Package className="w-4 h-4 text-amber-400" /> Top Products this month
+          </h2>
+          {stats.topProducts.length === 0 ? (
+            <p className="text-white/30 text-sm">No paid orders yet this month.</p>
+          ) : (
+            <div className="space-y-2">
+              {stats.topProducts.map((p, i) => (
+                <Link
+                  key={p.productId}
+                  href={`/admin/products/${p.productId}`}
+                  className="flex items-center justify-between py-2 border-b border-white/5 last:border-0 hover:bg-white/5 -mx-2 px-2 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs text-white/40 w-4">{i + 1}.</span>
+                    <p className="text-sm font-medium truncate">{p.name}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-emerald-400">{formatPrice(p.revenue)}</p>
+                    <p className="text-[10px] text-white/40">{p.units} sold</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="glass rounded-2xl p-6">
+          <h2 className="font-semibold mb-4 flex items-center gap-2">
+            <Users className="w-4 h-4 text-purple-400" /> Top Customers this month
+          </h2>
+          {stats.topCustomers.length === 0 ? (
+            <p className="text-white/30 text-sm">No paid orders yet this month.</p>
+          ) : (
+            <div className="space-y-2">
+              {stats.topCustomers.map((c, i) => (
+                <div
+                  key={c.email}
+                  className="flex items-center justify-between py-2 border-b border-white/5 last:border-0"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs text-white/40 w-4">{i + 1}.</span>
+                    <p className="text-sm font-medium truncate">{c.email}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-emerald-400">{formatPrice(c.revenue)}</p>
+                    <p className="text-[10px] text-white/40">{c.orders} order{c.orders === 1 ? '' : 's'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -5,8 +5,14 @@ import { sendEmail } from '@/lib/email'
 import { newBusinessApplication } from '@/lib/email-templates'
 import { createAdminNotification } from '@/lib/notifications'
 import { generateUniqueTrainerCode } from '@/lib/trainer'
+import { checkRateLimit, tooManyRequests } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  // Tighter limit on B2B applications — they're meaningful records and
+  // 3/hour from one IP is plenty for legitimate gym owners.
+  const rl = checkRateLimit(req, 'business-apply', { limit: 3, windowMs: 60 * 60_000 })
+  if (!rl.allowed) return tooManyRequests(rl.retryAfter)
+
   try {
     const body = await req.json()
     const { businessName, type, contactName, email, phone, website, reason } = body

@@ -88,7 +88,23 @@ export async function processRefund(args: {
   amount: number // cents
   reason?: string
 }): Promise<{ success: boolean; refundId?: string; error?: string }> {
-  // TODO: wire Chase payment processor refund endpoint.
+  // PRODUCTION SAFETY: never simulate a successful refund in prod. Same
+  // failure mode as processPayment — admin would issue a refund through
+  // the UI, see "success", but no money would actually move. Hard-fail
+  // until the Chase Orbital refund endpoint is wired.
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.CHASE_API_KEY || !process.env.CHASE_MERCHANT_ID) {
+      return {
+        success: false,
+        error: 'Cash refunds unavailable — payment processor not configured. Issue store credit instead.',
+      }
+    }
+    return {
+      success: false,
+      error: 'Cash refund integration is not yet active. Issue store credit instead.',
+    }
+  }
+  // Dev-only stub for testing the refund flow without a real merchant.
   void args
   return {
     success: true,
