@@ -9,7 +9,7 @@ import { UserPlus } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ name: '', email: '', username: '', password: '', confirm: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -23,7 +23,12 @@ export default function RegisterPage() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: form.name, email: form.email, password: form.password }),
+      body: JSON.stringify({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        username: form.username.trim() || undefined,
+      }),
     })
     if (res.ok) {
       router.push('/auth/login?registered=true')
@@ -50,6 +55,15 @@ export default function RegisterPage() {
               onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Input label="Email" type="email" required value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })} error={error} />
+            <Input
+              label="Username (optional)"
+              type="text"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              placeholder="e.g. jane.fitness"
+              hint="3-24 chars · letters, numbers, _ . -"
+              autoComplete="username"
+            />
             <Input label="Password" type="password" required value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })} />
             <Input label="Confirm Password" type="password" required value={form.confirm}

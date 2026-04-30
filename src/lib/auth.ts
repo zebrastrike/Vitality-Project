@@ -33,20 +33,26 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        // The form field is still named `email` for backward compat with
+        // existing client code, but it accepts either an email OR a
+        // username. The login page label was updated accordingly.
+        email: { label: 'Email or username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const email = credentials.email.toLowerCase()
-        const user = await prisma.user.findUnique({
-          where: { email },
-        })
+        const identifier = credentials.email.trim().toLowerCase()
+
+        // Heuristic: anything containing '@' = email, otherwise username.
+        // Avoids two round-trips on the common (email) path.
+        const user = identifier.includes('@')
+          ? await prisma.user.findUnique({ where: { email: identifier } })
+          : await prisma.user.findUnique({ where: { username: identifier } })
 
         if (!user || !user.passwordHash) {
           await logAudit({
-            userEmail: email,
+            userEmail: identifier,
             action: 'auth.login.failure',
             metadata: { reason: 'not_found_or_oauth_only' },
           })

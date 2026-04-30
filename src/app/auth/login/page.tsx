@@ -27,7 +27,7 @@ export default function LoginPage() {
     })
 
     if (res?.error) {
-      setError('Invalid email or password')
+      setError('Invalid email/username or password')
       setLoading(false)
     } else {
       router.push('/')
@@ -49,12 +49,13 @@ export default function LoginPage() {
         <div className="glass rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              label="Email"
-              type="email"
+              label="Email or username"
+              type="text"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="you@example.com or your username"
+              autoComplete="username"
               error={error}
             />
             <Input
