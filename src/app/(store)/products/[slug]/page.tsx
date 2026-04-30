@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Shield, Package, Zap, Edit3 } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getRelatedProducts } from '@/lib/recommendations'
+import { PairWithAntiInflammatory } from '@/components/store/pair-with-anti-inflammatory'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
 
@@ -235,6 +236,12 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       )}
+
+      {/* Pair-with anti-inflammatory recommendation (BPC-157 + TB-500) */}
+      <PairWithAntiInflammatory
+        currentSlug={product.slug}
+        currentCategorySlug={product.category?.slug}
+      />
 
       {/* Reviews */}
       <div className="mt-12">

@@ -5,7 +5,7 @@ import { z } from 'zod'
 const schema = z.object({
   email: z.string().email(),
   name: z.string().min(1).optional(),
-  plan: z.enum(['monthly', 'quarterly', 'annual']).default('monthly'),
+  plan: z.enum(['club', 'plus', 'premium', 'monthly', 'quarterly', 'annual']).default('club'),
   source: z.string().optional(),
 })
 

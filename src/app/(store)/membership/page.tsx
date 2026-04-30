@@ -9,50 +9,53 @@ import type { Metadata } from 'next'
 
 const plans = [
   {
-    id: 'monthly',
-    name: 'Monthly',
-    price: '$49',
+    id: 'club',
+    name: 'The Club',
+    price: '$25',
     period: '/mo',
     savings: null,
-    desc: 'Flexible month-to-month membership',
+    desc: 'Like Costco for peptides — base membership',
     features: [
-      'Early access to all products',
-      '15% off every order',
-      'Free standard shipping',
-      'Member-only compounds',
+      '5% permanent discount on every order',
+      'First access to new product drops',
+      'Members-only monthly discount drops',
+      'Members-only newsletter',
       'Priority support',
     ],
   },
   {
-    id: 'quarterly',
-    name: 'Quarterly',
-    price: '$129',
-    period: '/3mo',
-    savings: 'Save 12%',
-    desc: 'Commit for a quarter, save more',
+    id: 'plus',
+    name: 'Plus',
+    price: '$150',
+    period: '/mo',
+    savings: 'Save more',
+    desc: 'Subscription box — peptides delivered with perks',
     popular: true,
     features: [
-      'Everything in Monthly',
-      '20% off every order',
-      'Free expedited shipping',
-      'Early access to new stacks',
-      'Quarterly research brief',
+      'Everything in The Club',
+      '10% permanent discount',
+      '1 free peptide coupon every month',
+      'BAC water + syringes included',
+      'Free sample list — first picks of new releases',
+      'Access to newest research compounds',
+      'Peptide care package each shipment',
     ],
   },
   {
-    id: 'annual',
-    name: 'Annual',
-    price: '$449',
-    period: '/yr',
-    savings: 'Save 24%',
-    desc: 'Best value for serious researchers',
+    id: 'premium',
+    name: 'Premium Stacks',
+    price: '$250',
+    period: '/mo',
+    savings: 'Best value',
+    desc: 'White-glove tier — everything you need, no friction',
     features: [
-      'Everything in Quarterly',
-      '25% off every order',
-      'Free priority shipping',
-      'Exclusive annual-only compounds',
-      'Direct line to our team',
-      'First access to everything',
+      'Everything in Plus',
+      '15% permanent discount',
+      '3 free peptides every month',
+      'BAC water + syringes free with every order',
+      'We roll the red tape — concierge service',
+      'Exclusive premium-only stacks',
+      'Direct line to the team',
     ],
   },
 ]
@@ -65,7 +68,7 @@ const perks = [
 ]
 
 export default function MembershipPage() {
-  const [selectedPlan, setSelectedPlan] = useState('quarterly')
+  const [selectedPlan, setSelectedPlan] = useState('plus')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [submitted, setSubmitted] = useState(false)

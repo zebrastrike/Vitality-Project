@@ -33,6 +33,7 @@ model User {
   loyalty       LoyaltyAccount?
   storeCredit   StoreCredit?
   supportTickets SupportTicket[]
+  membership    Membership?
   refundsCreated Refund[]    @relation("RefundCreatedBy")
 
   verifyToken      String?   @unique
@@ -1284,4 +1285,35 @@ model CommunicationPreference {
   updatedAt       DateTime @updatedAt
 
   @@map("communication_preferences")
+}
+
+// ─── Membership Tiers (Vitality Club) ───────────────────────────────────────
+
+model Membership {
+  id                            String         @id @default(cuid())
+  userId                        String         @unique
+  tier                          MembershipTier @default(NONE)
+  status                        String         @default("ACTIVE") // ACTIVE / PAUSED / CANCELLED
+  monthlyPriceCents             Int            @default(0)
+  startedAt                     DateTime       @default(now())
+  renewsAt                      DateTime?
+  cancelledAt                   DateTime?
+  // Free peptide credits earned per billing period (Plus = 1, Premium = 3)
+  freePeptideCreditsThisPeriod  Int            @default(0)
+  freePeptidesUsedThisPeriod    Int            @default(0)
+  // Stripe-style subscription tracking — Chase will go here when ready
+  externalSubscriptionId        String?
+  paymentProvider               String?        // 'chase', 'stripe', etc.
+  user                          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                     DateTime       @default(now())
+  updatedAt                     DateTime       @updatedAt
+
+  @@map("memberships")
+}
+
+enum MembershipTier {
+  NONE
+  CLUB     // $25/mo
+  PLUS     // $150/mo
+  PREMIUM  // $300/mo
 }
