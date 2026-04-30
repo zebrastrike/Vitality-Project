@@ -130,18 +130,16 @@ async function runJob(): Promise<{ scanned: number; sent: number; skipped: numbe
 }
 
 export async function GET(req: NextRequest) {
-  // Auth: external cron uses ?secret=, admins can also call without (since
-  // route is public-by-URL — secret check is the only thing that gates it
-  // from being run by anyone).
-  if (CRON_SECRET) {
-    const provided = req.nextUrl.searchParams.get('secret')
-    if (provided !== CRON_SECRET) {
-      // Allow admin sessions through too — getServerSession would slow
-      // every cron poll, so for now just require the secret. If you
-      // want UI-triggered runs, hit the endpoint from /admin via a
-      // server action that knows the env var.
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  // Auth: external cron must pass ?secret=<CRON_SECRET>.
+  // Fail closed if CRON_SECRET is unset — otherwise the job is publicly
+  // callable and an attacker could drain the Resend quota / spam users
+  // by hammering this endpoint.
+  if (!CRON_SECRET) {
+    return NextResponse.json({ error: 'Cron secret not configured' }, { status: 503 })
+  }
+  const provided = req.nextUrl.searchParams.get('secret')
+  if (provided !== CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
