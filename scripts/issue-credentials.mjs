@@ -10,17 +10,31 @@
 // retrieve it after this run completes.
 
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+
+// Use whichever bcrypt library the running app uses. Vitality bundles
+// bcrypt (native) for NextAuth's hashing pipeline; bcryptjs is a pure-JS
+// fallback. Try in order; whichever resolves first wins.
+let bcrypt;
+try { bcrypt = (await import("bcrypt")).default; }
+catch { bcrypt = (await import("bcryptjs")).default; }
 
 const prisma = new PrismaClient();
 
-const TARGETS = [
-  { email: "kevin12bay@gmail.com",             role: "ADMIN",          label: "Platform admin (Kevin Bay)" },
-  { email: "sculpt.beauty.lounge@outlook.com", role: "TENANT_OWNER",   label: "Sculpt Beauty Lounge owner" },
-  { email: "ramcesuriasjr@gmail.com",          role: "TENANT_OWNER",   label: "Ramces Urias Jr owner" },
-  { email: "headspacebeautylounge@gmail.com",  role: "TENANT_OWNER",   label: "Headspace Beauty Lounge owner" },
+// Default: only the platform admin. Tenant owners use the activation-link
+// flow (already emailed). Pass --include-tenants on the CLI to also reset
+// passwords for the 3 gym owner accounts (only if they haven't activated).
+const ADMIN_TARGETS = [
+  { email: "kevin12bay@gmail.com", role: "ADMIN", label: "Platform admin (Kevin Bay)" },
 ];
+const TENANT_TARGETS = [
+  { email: "sculpt.beauty.lounge@outlook.com", role: "TENANT_OWNER", label: "Sculpt Beauty Lounge owner" },
+  { email: "ramcesuriasjr@gmail.com",          role: "TENANT_OWNER", label: "Ramces Urias Jr owner" },
+  { email: "headspacebeautylounge@gmail.com",  role: "TENANT_OWNER", label: "Headspace Beauty Lounge owner" },
+];
+const TARGETS = process.argv.includes("--include-tenants")
+  ? [...ADMIN_TARGETS, ...TENANT_TARGETS]
+  : ADMIN_TARGETS;
 
 // Strong, human-typeable password — 16 chars, no ambiguous glyphs.
 const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
