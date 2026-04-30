@@ -279,6 +279,11 @@ export function orderConfirmation(args: {
     <p style="margin:0 0 14px 0;font-size:14px;line-height:1.55;color:#d1d5db;">${addressHtml}</p>
     ${button('View order', `${APP_URL}/account/orders`)}
     ${p(`If you have any questions about your order, just reply to this email — a real human reads it.`)}
+    ${divider()}
+    <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:14px 16px;margin:8px 0 0;">
+      <p style="margin:0 0 6px 0;font-size:13px;font-weight:700;color:#ffffff;">All sales are final — no refunds</p>
+      <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;">We do not issue refunds under any circumstances, including shipping delays. The only remedy we offer is a replacement product when the original arrives with damaged packaging — contact us within 7 days of delivery with photos.</p>
+    </div>
   `
 
   const text = `Order confirmed, ${customerName}
@@ -297,6 +302,12 @@ ${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zip}
 ${shippingAddress.country || 'US'}
 
 View your order: ${APP_URL}/account/orders
+
+ALL SALES ARE FINAL — NO REFUNDS
+We do not issue refunds under any circumstances, including shipping
+delays. The only remedy we offer is a replacement product when the
+original arrives with damaged packaging — contact us within 7 days of
+delivery with photos.
 
 — The Vitality Project
 `

@@ -12,6 +12,7 @@ import { Shield, Package, Zap, Edit3 } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getRelatedProducts } from '@/lib/recommendations'
 import { PairWithAntiInflammatory } from '@/components/store/pair-with-anti-inflammatory'
+import { NoRefundsNotice } from '@/components/store/no-refunds-notice'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
 
@@ -203,6 +204,9 @@ export default async function ProductPage({ params }: Props) {
               size="lg"
             />
           </div>
+
+          {/* All-sales-final notice — compact, links to full policy */}
+          <NoRefundsNotice variant="compact" />
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10">

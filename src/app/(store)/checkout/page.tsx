@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Sparkles, Lock } from 'lucide-react'
+import { NoRefundsNotice } from '@/components/store/no-refunds-notice'
 
 export default function CheckoutPage() {
   return (
@@ -18,6 +19,10 @@ export default function CheckoutPage() {
           Join The Vitality Project
         </Button>
       </Link>
+
+      <div className="mt-12 max-w-md mx-auto text-left">
+        <NoRefundsNotice />
+      </div>
     </div>
   )
 }
