@@ -1268,3 +1268,347 @@ ${unsubscribeUrl ? `\nUnsubscribe: ${unsubscribeUrl}\n` : ''}`
     text,
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Zelle payment flow — three templates:
+//   zelleOrderInstructions  → customer, immediately after placing order
+//   zelleOrderAdminAlert    → admin, on every new Zelle order
+//   zellePaymentConfirmed   → customer, after admin marks Zelle received
+// Order is created in PENDING / UNPAID state; nothing ships until admin
+// clicks "Mark Paid" in /admin/orders.
+// ──────────────────────────────────────────────────────────────────────────
+
+export function zelleOrderInstructions(args: {
+  orderNumber: string
+  customerName: string
+  items: OrderItemLine[]
+  subtotal: number
+  total: number
+  shippingAddress: ShippingAddressShape
+  zelleEmail: string
+  zelleDisplayName?: string
+  zellePhone?: string
+}) {
+  const {
+    orderNumber,
+    customerName,
+    items,
+    subtotal,
+    total,
+    shippingAddress,
+    zelleEmail,
+    zelleDisplayName,
+    zellePhone,
+  } = args
+
+  const itemsHtml = items
+    .map((it) => {
+      const lineTotal = it.total ?? it.price * it.quantity
+      return `<tr>
+        <td style="padding:8px 0;color:#e5e7eb;font-size:14px;">
+          ${escapeHtml(it.name)} <span style="color:#6b7280;">× ${it.quantity}</span>
+        </td>
+        <td align="right" style="padding:8px 0;color:#ffffff;font-size:14px;">${formatMoney(lineTotal)}</td>
+      </tr>`
+    })
+    .join('')
+
+  const addressHtml = [
+    escapeHtml(shippingAddress.name),
+    escapeHtml(shippingAddress.line1),
+    shippingAddress.line2 ? escapeHtml(shippingAddress.line2) : null,
+    `${escapeHtml(shippingAddress.city)}, ${escapeHtml(shippingAddress.state)} ${escapeHtml(shippingAddress.zip)}`,
+    shippingAddress.country ? escapeHtml(shippingAddress.country) : 'US',
+  ]
+    .filter(Boolean)
+    .join('<br/>')
+
+  const body = `
+    ${h1(`Order received, ${escapeHtml(customerName)}`)}
+    ${p(`We've reserved your items. The next step is yours: send payment via Zelle and we'll ship as soon as the funds arrive (usually same day).`)}
+
+    <div style="background:linear-gradient(180deg,rgba(98,112,242,0.16),rgba(98,112,242,0.06));border:1px solid rgba(98,112,242,0.45);border-radius:14px;padding:20px;margin:14px 0 18px;">
+      ${
+        zelleDisplayName
+          ? `<div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Recipient name</div>
+             <div style="font-size:16px;font-weight:600;color:#ffffff;margin-bottom:14px;">${escapeHtml(zelleDisplayName)}</div>`
+          : ''
+      }
+      <div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;">Send Zelle to</div>
+      <div style="font-size:20px;font-weight:700;color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;">${escapeHtml(zelleEmail)}</div>
+      ${
+        zellePhone
+          ? `<div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin:14px 0 6px;">Or by phone</div>
+             <div style="font-size:18px;font-weight:700;color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(zellePhone)}</div>`
+          : ''
+      }
+      <div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin:18px 0 8px;">Memo / note (REQUIRED)</div>
+      <div style="font-size:18px;font-weight:700;color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</div>
+      <div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin:18px 0 8px;">Amount</div>
+      <div style="font-size:24px;font-weight:700;color:#ffffff;">${formatMoney(total)}</div>
+    </div>
+
+    ${p(`<strong style="color:#ffffff;">Important:</strong> include the order number <strong style="color:#ffffff;">#${escapeHtml(orderNumber)}</strong> in the Zelle memo so we can match your payment to this order. Without it, fulfillment is delayed.`)}
+
+    ${box(`
+      <div style="font-size:12px;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Order</div>
+      <div style="font-size:18px;font-weight:700;color:#ffffff;">#${escapeHtml(orderNumber)}</div>
+    `)}
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0;">
+      ${itemsHtml}
+      <tr><td colspan="2" style="padding:10px 0 0 0;"><div style="height:1px;background:rgba(255,255,255,0.08);"></div></td></tr>
+      <tr>
+        <td style="padding:8px 0;color:#9ca3af;font-size:14px;">Subtotal</td>
+        <td align="right" style="padding:8px 0;color:#e5e7eb;font-size:14px;">${formatMoney(subtotal)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#ffffff;font-size:15px;font-weight:700;">Total to send</td>
+        <td align="right" style="padding:8px 0;color:#ffffff;font-size:15px;font-weight:700;">${formatMoney(total)}</td>
+      </tr>
+    </table>
+
+    ${divider()}
+    <div style="font-size:12px;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">Shipping to</div>
+    <p style="margin:0 0 14px 0;font-size:14px;line-height:1.55;color:#d1d5db;">${addressHtml}</p>
+    ${button('View order', `${APP_URL}/account/orders`)}
+
+    ${p(`Questions? Reply to this email — a real human reads it.`)}
+
+    ${divider()}
+    <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:14px 16px;margin:8px 0 0;">
+      <p style="margin:0 0 6px 0;font-size:13px;font-weight:700;color:#ffffff;">All sales are final — no refunds</p>
+      <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;">We do not issue refunds under any circumstances, including shipping delays. The only remedy we offer is a replacement product when the original arrives with damaged packaging — contact us within 7 days of delivery with photos.</p>
+    </div>
+  `
+
+  const text = `Order received, ${customerName}
+
+We've reserved your items. Send payment via Zelle to complete your order:
+
+  Send Zelle to:  ${zelleEmail}
+  Memo / note:    #${orderNumber}    (REQUIRED — without this we can't match your payment)
+  Amount:         ${formatMoney(total)}
+
+Order #${orderNumber}
+
+${items.map((it) => `  ${it.name} x${it.quantity} — ${formatMoney(it.total ?? it.price * it.quantity)}`).join('\n')}
+
+Subtotal: ${formatMoney(subtotal)}
+Total to send: ${formatMoney(total)}
+
+Shipping to:
+${shippingAddress.name}
+${shippingAddress.line1}
+${shippingAddress.line2 ? shippingAddress.line2 + '\n' : ''}${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zip}
+${shippingAddress.country || 'US'}
+
+We ship as soon as Zelle funds arrive — usually same day. Reply with any questions.
+
+— The Vitality Project
+`
+
+  return {
+    subject: `Send Zelle to complete order #${orderNumber} — ${formatMoney(total)}`,
+    html: wrap(body, {
+      preheader: `Send ${formatMoney(total)} via Zelle to ${zelleEmail} — memo #${orderNumber}`,
+    }),
+    text,
+  }
+}
+
+export function zelleOrderAdminAlert(args: {
+  orderNumber: string
+  orderId: string
+  customerName: string
+  customerEmail: string
+  total: number
+  itemCount: number
+}) {
+  const { orderNumber, orderId, customerName, customerEmail, total, itemCount } = args
+
+  const body = `
+    ${h1(`New Zelle order — payment pending`)}
+    ${p(`A customer placed a Zelle order. They've been emailed instructions to send payment. When the Zelle hits, click "Mark Paid" to release fulfillment.`)}
+
+    ${box(`
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Order</td>
+          <td align="right" style="padding:6px 0;color:#ffffff;font-size:14px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Customer</td>
+          <td align="right" style="padding:6px 0;color:#e5e7eb;font-size:14px;">${escapeHtml(customerName)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Email</td>
+          <td align="right" style="padding:6px 0;color:#e5e7eb;font-size:14px;">${escapeHtml(customerEmail)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Items</td>
+          <td align="right" style="padding:6px 0;color:#e5e7eb;font-size:14px;">${itemCount}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#ffffff;font-size:14px;font-weight:700;">Amount expected</td>
+          <td align="right" style="padding:6px 0;color:#ffffff;font-size:16px;font-weight:700;">${formatMoney(total)}</td>
+        </tr>
+      </table>
+    `)}
+
+    ${button('Open order in admin', `${APP_URL}/admin/orders/${orderId}`)}
+
+    ${p(`Customer was instructed to send Zelle with memo <strong style="color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</strong> so you can match the deposit to the order.`)}
+  `
+
+  const text = `New Zelle order — payment pending
+
+Order #${orderNumber}
+Customer: ${customerName} <${customerEmail}>
+Items: ${itemCount}
+Amount expected: ${formatMoney(total)}
+
+Customer was emailed Zelle instructions with memo #${orderNumber}.
+
+When the Zelle arrives, mark paid: ${APP_URL}/admin/orders/${orderId}
+`
+
+  return {
+    subject: `[Zelle pending] Order #${orderNumber} — ${formatMoney(total)}`,
+    html: wrap(body, {
+      preheader: `${customerName} placed a ${formatMoney(total)} Zelle order — awaiting deposit`,
+    }),
+    text,
+  }
+}
+
+export function zellePaymentConfirmed(args: {
+  orderNumber: string
+  customerName: string
+  total: number
+}) {
+  const { orderNumber, customerName, total } = args
+
+  const body = `
+    ${h1(`Payment received — fulfilling now`)}
+    ${p(`Hey ${escapeHtml(customerName)}, we received your Zelle payment of <strong style="color:#ffffff;">${formatMoney(total)}</strong> for order <strong style="color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</strong>. Your order is moving into fulfillment now.`)}
+    ${p(`We'll email tracking info as soon as it ships.`)}
+    ${box(`
+      <div style="font-size:12px;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Order</div>
+      <div style="font-size:18px;font-weight:700;color:#ffffff;">#${escapeHtml(orderNumber)}</div>
+      <div style="font-size:13px;color:#9ca3af;margin-top:10px;">Status: <span style="color:#34d399;font-weight:700;">Paid · Processing</span></div>
+    `)}
+    ${button('View order', `${APP_URL}/account/orders`)}
+    ${p(`Reply with any questions.`)}
+  `
+
+  const text = `Payment received — fulfilling now
+
+Hey ${customerName},
+
+We received your Zelle payment of ${formatMoney(total)} for order #${orderNumber}. Your order is moving into fulfillment.
+
+We'll email tracking info as soon as it ships.
+
+View order: ${APP_URL}/account/orders
+
+— The Vitality Project
+`
+
+  return {
+    subject: `Payment received — order #${orderNumber} is being fulfilled`,
+    html: wrap(body, {
+      preheader: `We got your Zelle for ${formatMoney(total)} — order #${orderNumber} is moving`,
+    }),
+    text,
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Customer Zelle payment reminder — pinged for orders that have been
+// PENDING+UNPAID for 3+ days. Polite, single send per order.
+// Returns RAW HTML (not wrapped in subject/text shell) for direct
+// `sendEmail({ html })` use from the cron route.
+// ──────────────────────────────────────────────────────────────────────
+export function paymentReminder(args: {
+  name: string | null
+  orderNumber: string
+  amountCents: number
+  ageDays: number
+}): string {
+  const { name, orderNumber, amountCents, ageDays } = args
+  const greeting = name ? `Hi ${name.split(" ")[0]}` : "Hi"
+  const amount = `$${(amountCents / 100).toFixed(2)}`
+  const zelleEmail = process.env.ZELLE_RECIPIENT_EMAIL ?? "billing@thevitalityproject.com"
+  const zellePhone = process.env.ZELLE_RECIPIENT_PHONE ?? ""
+
+  const body = `
+    <h1 style="font:600 20px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;margin:0 0 12px;">A quick reminder about your order</h1>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">${greeting},</p>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">
+      Just a friendly heads-up — your order
+      <strong>#${orderNumber}</strong> placed ${ageDays} day${ageDays === 1 ? "" : "s"} ago is still
+      waiting on Zelle payment of <strong>${amount}</strong>. Once funds arrive
+      we ship the same day, so getting it sent now is the fastest path.
+    </p>
+    <div style="background:#f1f5f9;border-radius:10px;padding:16px;margin:0 0 14px;">
+      <p style="font:12px/1.4 -apple-system,sans-serif;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Zelle to</p>
+      <p style="font:600 15px/1.4 -apple-system,sans-serif;color:#0f172a;margin:0 0 4px;">${zelleEmail}</p>
+      ${zellePhone ? `<p style="font:14px/1.4 -apple-system,sans-serif;color:#475569;margin:0 0 8px;">or ${zellePhone}</p>` : ""}
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;">
+        <strong>Memo / note:</strong> ${orderNumber}
+      </p>
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;">
+        <strong>Amount:</strong> ${amount}
+      </p>
+    </div>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#64748b;margin:0 0 8px;">
+      Already sent it? Ignore this email — we'll catch up to the deposit
+      and get your order moving. Replies come straight to our team if
+      anything's off.
+    </p>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#94a3b8;margin:18px 0 0;">— The Vitality Project</p>
+  `
+  return `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">${body}</div></body></html>`
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Membership invoice — sent when a user signs up for CLUB / PLUS /
+// PREMIUM. Tells them how to Zelle the first month so we activate.
+// ──────────────────────────────────────────────────────────────────────
+export function membershipInvoice(args: {
+  name: string | null
+  planLabel: string
+  amountCents: number
+  invoiceNumber: string
+}): string {
+  const { name, planLabel, amountCents, invoiceNumber } = args
+  const greeting = name ? `Hi ${name.split(" ")[0]}` : "Hi"
+  const amount = `$${(amountCents / 100).toFixed(2)}`
+  const zelleEmail = process.env.ZELLE_RECIPIENT_EMAIL ?? "billing@thevitalityproject.com"
+  const zellePhone = process.env.ZELLE_RECIPIENT_PHONE ?? ""
+
+  const body = `
+    <h1 style="font:600 20px/1.3 -apple-system,sans-serif;color:#0f172a;margin:0 0 12px;">Welcome to ${planLabel}</h1>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">${greeting},</p>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">
+      Thanks for joining The Vitality Project. To activate your <strong>${planLabel}</strong>
+      membership, send <strong>${amount}</strong> via Zelle. Membership turns on the
+      moment funds arrive — usually same day.
+    </p>
+    <div style="background:#f1f5f9;border-radius:10px;padding:16px;margin:0 0 14px;">
+      <p style="font:12px/1.4 -apple-system,sans-serif;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Zelle to</p>
+      <p style="font:600 15px/1.4 -apple-system,sans-serif;color:#0f172a;margin:0 0 4px;">${zelleEmail}</p>
+      ${zellePhone ? `<p style="font:14px/1.4 -apple-system,sans-serif;color:#475569;margin:0 0 8px;">or ${zellePhone}</p>` : ""}
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;"><strong>Memo / note:</strong> ${invoiceNumber}</p>
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;"><strong>Amount:</strong> ${amount}</p>
+    </div>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#64748b;margin:0 0 8px;">
+      Once your membership is active you'll get the discount on every order,
+      free bac water + syringes (Plus + Premium), and 1–3 free peptides per
+      cycle (Plus + Premium). Cancel anytime by replying to this email.
+    </p>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#94a3b8;margin:18px 0 0;">— The Vitality Project</p>
+  `
+  return `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">${body}</div></body></html>`
+}

@@ -129,7 +129,7 @@ export default function MembershipPage() {
       <div className="text-center mb-16">
         <div className="inline-flex items-center gap-2 glass-subtle rounded-full px-4 py-1.5 text-sm text-brand-300 mb-6">
           <Sparkles className="w-3.5 h-3.5" />
-          Membership — Coming Soon
+          Memberships — Live now
         </div>
         <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">
           Vitalize Your <span className="text-gradient">Project</span>
@@ -200,9 +200,9 @@ export default function MembershipPage() {
       {/* Signup Form */}
       <div className="max-w-lg mx-auto mb-20">
         <div className="glass rounded-3xl p-8">
-          <h2 className="text-2xl font-bold text-center mb-2">Get On The List</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">Join now</h2>
           <p className="text-center text-white/40 text-sm mb-6">
-            Memberships are launching soon. Reserve your spot — no payment today. We'll notify you the moment it goes live.
+            Sign in (or create an account in 30 seconds) and choose a plan above. We'll send the Zelle send-to address by email and activate your membership the moment funds clear.
           </p>
 
           {error && (
@@ -231,7 +231,7 @@ export default function MembershipPage() {
               Join as {plans.find(p => p.id === selectedPlan)?.name} Member
             </Button>
             <p className="text-xs text-white/25 text-center">
-              No payment required. You're reserving your spot for launch.
+              Pay via Zelle. We email the send-to address right after you submit; membership activates as soon as funds clear.
             </p>
           </form>
         </div>
@@ -255,14 +255,14 @@ export default function MembershipPage() {
 
       {/* Bottom CTA */}
       <div className="glass rounded-3xl p-10 text-center">
-        <h2 className="text-2xl font-bold mb-3">Memberships are launching soon.</h2>
+        <h2 className="text-2xl font-bold mb-3">Pick your plan and join in 60 seconds.</h2>
         <p className="text-white/40 mb-6 max-w-md mx-auto">
-          Discounts. Products. Priority access. Members go first. Everyone else waits.
+          Discounts on every order. Free bac water + syringes on Plus. 1–3 free peptides each cycle on Plus / Premium. Cancel anytime.
         </p>
         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <Button size="lg">
             <Sparkles className="w-5 h-5" />
-            Join Now — It's Free
+            Choose a plan
           </Button>
         </button>
       </div>

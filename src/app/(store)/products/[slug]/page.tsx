@@ -124,13 +124,14 @@ export default async function ProductPage({ params }: Props) {
         {/* Images */}
         <div className="space-y-4">
           <div className="relative aspect-square rounded-2xl overflow-hidden glass">
-            {mainImage ? (
-              <Image src={mainImage.url} alt={mainImage.alt ?? product.name} fill className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-white/10">
-                <span className="text-8xl font-bold">VP</span>
-              </div>
-            )}
+            <Image
+              src={mainImage?.url ?? "/products/vial-default.png"}
+              alt={mainImage?.alt ?? product.name}
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-contain p-6"
+              priority
+            />
           </div>
           {product.images.length > 1 && (
             <div className="grid grid-cols-4 gap-3">

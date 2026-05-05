@@ -264,8 +264,7 @@ export default function CheckoutPage() {
               <p className="text-xs text-white/60 mt-1.5 leading-relaxed">
                 After you place this order, we'll email you the Zelle send-to
                 address and your order number to use as the memo. Your items
-                ship as soon as funds arrive (usually same day). Card payments
-                are coming soon.
+                ship as soon as funds arrive (usually same day).
               </p>
             </div>
           </div>
