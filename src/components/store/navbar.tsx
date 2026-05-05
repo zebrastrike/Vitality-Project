@@ -40,12 +40,11 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
             <Image
-              src="/logo-white.png"
+              src="/logo-light.png"
               alt="The Vitality Project"
               width={500}
               height={500}
-              className="h-20 w-[340px] object-cover object-center"
-              style={{ mixBlendMode: 'lighten' }}
+              className="h-16 w-auto object-contain"
               priority
             />
           </Link>
