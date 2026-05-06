@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { InstallAppButton } from '@/components/admin/install-app-button'
+import { PendingActionsBanner } from '@/components/admin/pending-actions-banner'
 
 async function getDashboardStats(adminUserId: string | null) {
   // Month-to-date window for the P&L card.
@@ -199,6 +200,9 @@ export default async function AdminDashboard() {
           <InstallAppButton />
         </div>
       </div>
+
+      {/* Action-required notices: missing payment config, queued campaigns */}
+      <PendingActionsBanner />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
