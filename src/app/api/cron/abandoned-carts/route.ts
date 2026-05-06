@@ -91,6 +91,23 @@ async function runJob(): Promise<{ scanned: number; sent: number; skipped: numbe
         continue
       }
 
+      // Skip users with a recent unpaid order in flight — they didn't abandon
+      // anything, they're between "place order" and "Zelle hits the bank."
+      // Without this, every Zelle customer gets a passive-aggressive nudge
+      // while they're literally on their way to pay.
+      const pendingOrder = await prisma.order.findFirst({
+        where: {
+          userId,
+          paymentStatus: 'UNPAID',
+          createdAt: { gte: maxAge },
+        },
+        select: { id: true },
+      })
+      if (pendingOrder) {
+        skipped += 1
+        continue
+      }
+
       const tpl = abandonedCart({
         name: bundle.name,
         items: bundle.items,
