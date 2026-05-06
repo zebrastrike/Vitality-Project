@@ -6,6 +6,7 @@ import { Footer } from '@/components/store/footer'
 import { AiChat } from '@/components/store/ai-chat'
 import { RuoBanner } from '@/components/store/ruo-banner'
 import { AnalyticsTracker } from '@/components/analytics-tracker'
+import { Paywall } from '@/components/store/paywall'
 import { getTenantContextForRequest } from '@/lib/tenant-db'
 import { notFound } from 'next/navigation'
 
@@ -25,6 +26,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <Suspense fallback={null}>
         <AnalyticsTracker />
       </Suspense>
+      <Paywall />
     </div>
   )
 }

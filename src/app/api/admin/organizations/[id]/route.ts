@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
+import { sendEmail } from '@/lib/email'
+import { gymOwnerInvite } from '@/lib/email-templates'
+import { randomBytes } from 'crypto'
 
 export async function GET(
   req: NextRequest,
@@ -68,17 +71,71 @@ export async function PATCH(
     const body = await req.json()
     const { status, commissionRate } = body
 
-    // Update org status if provided
+    // Update org status if provided. When approving (ACTIVE) for the first
+    // time, fire an activation email to any owner who hasn't set a password
+    // yet — covers the self-serve apply → admin approve → owner activates flow.
+    let approvalEmailSent: { to: string; activationUrl: string }[] = []
     if (status) {
       const validStatuses = ['ACTIVE', 'SUSPENDED']
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
       }
 
+      const orgBefore = await prisma.organization.findUnique({
+        where: { id },
+        select: {
+          status: true,
+          name: true,
+          type: true,
+          members: {
+            where: { role: 'OWNER' },
+            include: { user: { select: { id: true, email: true, name: true, passwordHash: true } } },
+          },
+        },
+      })
+
       await prisma.organization.update({
         where: { id },
         data: { status: status as any },
       })
+
+      // Going SUSPENDED → ACTIVE: hand each passwordless owner a fresh
+      // activation link.
+      if (status === 'ACTIVE' && orgBefore && orgBefore.status !== 'ACTIVE') {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
+        for (const m of orgBefore.members) {
+          if (m.user.passwordHash) continue
+          const token = randomBytes(32).toString('hex')
+          await prisma.user.update({
+            where: { id: m.user.id },
+            data: {
+              resetToken: token,
+              resetTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            },
+          })
+          const activationUrl = `${baseUrl}/auth/reset-password/${token}?invite=1&org=${encodeURIComponent(orgBefore.name)}`
+          try {
+            const tpl = gymOwnerInvite({
+              name: m.user.name || 'there',
+              orgName: orgBefore.name,
+              orgType: orgBefore.type,
+              inviteUrl: activationUrl,
+              inviterName: session.user.name || session.user.email || undefined,
+            })
+            await sendEmail({
+              to: m.user.email,
+              subject: tpl.subject,
+              html: tpl.html,
+              text: tpl.text,
+            })
+            approvalEmailSent.push({ to: m.user.email, activationUrl })
+          } catch (err) {
+            console.error('Org-approval activation email failed:', err)
+            // Surface activation URL in the response so the admin can share it manually
+            approvalEmailSent.push({ to: m.user.email, activationUrl })
+          }
+        }
+      }
     }
 
     // Update commission rate on all locations if provided
@@ -112,7 +169,7 @@ export async function PATCH(
       metadata: { status, commissionRate },
     })
 
-    return NextResponse.json(updated)
+    return NextResponse.json({ ...updated, approvalEmailSent })
   } catch (error) {
     console.error('Admin org update error:', error)
     return NextResponse.json({ error: 'Failed to update organization' }, { status: 500 })

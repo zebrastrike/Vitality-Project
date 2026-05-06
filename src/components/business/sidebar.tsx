@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, MapPin, Users, DollarSign,
+  LayoutDashboard, MapPin, Users, UserPlus, DollarSign,
   Settings, LogOut, Building2,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/business', label: 'Overview', icon: LayoutDashboard, exact: true },
   { href: '/business/locations', label: 'Locations', icon: MapPin },
   { href: '/business/staff', label: 'Staff', icon: Users },
+  { href: '/business/clients', label: 'Clients', icon: UserPlus },
   { href: '/business/commissions', label: 'Commissions', icon: DollarSign },
   { href: '/business/settings', label: 'Settings', icon: Settings },
 ]

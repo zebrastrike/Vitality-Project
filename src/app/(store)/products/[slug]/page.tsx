@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Shield, Package, Zap, Edit3 } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getRelatedProducts } from '@/lib/recommendations'
+import { PairWithAntiInflammatory } from '@/components/store/pair-with-anti-inflammatory'
+import { NoRefundsNotice } from '@/components/store/no-refunds-notice'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
 
@@ -122,13 +124,14 @@ export default async function ProductPage({ params }: Props) {
         {/* Images */}
         <div className="space-y-4">
           <div className="relative aspect-square rounded-2xl overflow-hidden glass">
-            {mainImage ? (
-              <Image src={mainImage.url} alt={mainImage.alt ?? product.name} fill className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-white/10">
-                <span className="text-8xl font-bold">VP</span>
-              </div>
-            )}
+            <Image
+              src={mainImage?.url ?? "/products/vial-default.png"}
+              alt={mainImage?.alt ?? product.name}
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="object-contain p-6"
+              priority
+            />
           </div>
           {product.images.length > 1 && (
             <div className="grid grid-cols-4 gap-3">
@@ -203,6 +206,9 @@ export default async function ProductPage({ params }: Props) {
             />
           </div>
 
+          {/* All-sales-final notice — compact, links to full policy */}
+          <NoRefundsNotice variant="compact" />
+
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10">
             {[
@@ -235,6 +241,12 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       )}
+
+      {/* Pair-with anti-inflammatory recommendation (BPC-157 + TB-500) */}
+      <PairWithAntiInflammatory
+        currentSlug={product.slug}
+        currentCategorySlug={product.category?.slug}
+      />
 
       {/* Reviews */}
       <div className="mt-12">

@@ -33,3 +33,6 @@ Thumbs.db
 # Docker volumes
 postgres-data/
 redis-data/
+
+# Generated docs from scripts/generate-supplier-order.ts
+scripts/out/

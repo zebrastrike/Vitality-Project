@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { formatPrice } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Building2, Eye } from 'lucide-react'
+import { InviteGymButton } from './invite-gym-button'
 
 export default async function AdminOrganizationsPage() {
   const organizations = await prisma.organization.findMany({
@@ -53,12 +54,15 @@ export default async function AdminOrganizationsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Building2 className="w-6 h-6 text-brand-400" />
-          Organizations
-        </h1>
-        <p className="text-white/40 mt-1">{organizations.length} total</p>
+      <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-brand-400" />
+            Organizations
+          </h1>
+          <p className="text-white/40 mt-1">{organizations.length} total</p>
+        </div>
+        <InviteGymButton />
       </div>
 
       <div className="glass rounded-2xl overflow-hidden">

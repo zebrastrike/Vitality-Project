@@ -279,6 +279,11 @@ export function orderConfirmation(args: {
     <p style="margin:0 0 14px 0;font-size:14px;line-height:1.55;color:#d1d5db;">${addressHtml}</p>
     ${button('View order', `${APP_URL}/account/orders`)}
     ${p(`If you have any questions about your order, just reply to this email — a real human reads it.`)}
+    ${divider()}
+    <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:14px 16px;margin:8px 0 0;">
+      <p style="margin:0 0 6px 0;font-size:13px;font-weight:700;color:#ffffff;">All sales are final — no refunds</p>
+      <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;">We do not issue refunds under any circumstances, including shipping delays. The only remedy we offer is a replacement product when the original arrives with damaged packaging — contact us within 7 days of delivery with photos.</p>
+    </div>
   `
 
   const text = `Order confirmed, ${customerName}
@@ -297,6 +302,12 @@ ${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zip}
 ${shippingAddress.country || 'US'}
 
 View your order: ${APP_URL}/account/orders
+
+ALL SALES ARE FINAL — NO REFUNDS
+We do not issue refunds under any circumstances, including shipping
+delays. The only remedy we offer is a replacement product when the
+original arrives with damaged packaging — contact us within 7 days of
+delivery with photos.
 
 — The Vitality Project
 `
@@ -544,6 +555,43 @@ Browse: ${APP_URL}/products
 // ──────────────────────────────────────────────────────────────────────────
 // Template: Staff Invite
 // ──────────────────────────────────────────────────────────────────────────
+
+export function gymOwnerInvite(args: {
+  name: string
+  orgName: string
+  orgType: string
+  inviteUrl: string
+  inviterName?: string
+}) {
+  const { name, orgName, orgType, inviteUrl, inviterName } = args
+  const friendlyType = orgType.toLowerCase().replace('_', ' ')
+  const inviter = inviterName ? escapeHtml(inviterName) : 'The Vitality Project team'
+
+  const body = `
+    ${h1(`You're invited to set up ${escapeHtml(orgName)}`)}
+    ${p(`Hi ${escapeHtml(name)}, ${inviter} has invited you to manage <strong style="color:#ffffff;">${escapeHtml(orgName)}</strong> on The Vitality Project — your ${escapeHtml(friendlyType)}'s back-office portal.`)}
+    ${p(`Activate your account to start adding trainers, managing clients, configuring your kiosk, and seeing commission reports.`)}
+    ${button('Activate your account', inviteUrl)}
+    ${p(`This invitation expires in 7 days. Reply to this email if you weren't expecting it.`)}
+  `
+
+  const text = `You're invited to set up ${orgName}
+
+Hi ${name}, ${inviterName || 'The Vitality Project team'} has invited you to manage ${orgName} on The Vitality Project as the owner of this ${friendlyType}.
+
+Activate your account: ${inviteUrl}
+
+This invitation expires in 7 days.
+
+— The Vitality Project
+`
+
+  return {
+    subject: `Activate your account: ${orgName} on The Vitality Project`,
+    html: wrap(body, { preheader: `You've been invited to manage ${orgName}.` }),
+    text,
+  }
+}
 
 export function staffInvite(args: {
   name: string
@@ -979,4 +1027,588 @@ Review: ${APP_URL}/admin/organizations
     }),
     text,
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Template: Fulfillment Request → supplier (drop-ship workflow)
+//
+// Sent to orders@integrativepracticesolutions.com (or whatever
+// FULFILLMENT_EMAIL is set to in env) for every Fulfillment we create.
+// Replaces the NetSuite API push until we hit the volume threshold that
+// unlocks API access. Pricing on the customer-facing site is unaffected
+// — this email carries the DROP-SHIP rate (our cost) for invoicing.
+// ──────────────────────────────────────────────────────────────────────────
+
+export function fulfillmentRequest(args: {
+  orderNumber: string
+  fulfillmentId: string
+  facilityName: string
+  shipTo: {
+    name: string
+    line1: string
+    line2?: string | null
+    city: string
+    state: string
+    zip: string
+    country: string
+    phone?: string | null
+  }
+  customerEmail: string
+  items: Array<{
+    sku: string | null
+    name: string
+    quantity: number
+    /** Drop-ship rate per unit, in cents. */
+    unitCostCents: number | null
+  }>
+  /** True when the fulfillment contains exactly one peptide line item.
+   *  Surfaces in the subject + a banner so the supplier can route to
+   *  the single-peptide drop-ship pipeline. */
+  isSinglePeptide: boolean
+  /** Optional special-handling instructions (cold-chain, signature, etc.) */
+  notes?: string
+}) {
+  const {
+    orderNumber,
+    fulfillmentId,
+    facilityName,
+    shipTo,
+    customerEmail,
+    items,
+    isSinglePeptide,
+    notes,
+  } = args
+
+  const fmt = (cents: number | null) =>
+    cents == null ? '—' : `$${(cents / 100).toFixed(2)}`
+  const lineTotal = (it: { quantity: number; unitCostCents: number | null }) =>
+    it.unitCostCents == null ? null : it.unitCostCents * it.quantity
+  const totalCostCents = items.reduce(
+    (sum, it) => sum + (lineTotal(it) ?? 0),
+    0,
+  )
+  const anyMissingCost = items.some((it) => it.unitCostCents == null)
+
+  const itemRows = items
+    .map(
+      (it) => `
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-family:monospace;font-size:12px;color:#d1d5db;">${escapeHtml(it.sku ?? '—')}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;">${escapeHtml(it.name)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:center;">${it.quantity}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:right;">${fmt(it.unitCostCents)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:right;">${fmt(lineTotal(it))}</td>
+        </tr>`,
+    )
+    .join('')
+
+  const singleBanner = isSinglePeptide
+    ? `<div style="background-color:rgba(99,112,242,0.12);border:1px solid rgba(99,112,242,0.35);border-radius:10px;padding:12px 14px;margin:0 0 18px 0;font-size:13px;color:#aab4ff;">
+         <strong style="color:#c5cdff;">Single-peptide order</strong> — route through the drop-ship rate pipeline.
+       </div>`
+    : ''
+
+  const noteBlock = notes
+    ? box(`<div style="font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Special handling</div><div style="font-size:14px;color:#e5e7eb;">${escapeHtml(notes)}</div>`)
+    : ''
+
+  const body = `
+    ${h1(`New order to fulfill — ${orderNumber}`)}
+    ${singleBanner}
+    ${p(`Facility: <strong style="color:#ffffff;">${escapeHtml(facilityName)}</strong> · Fulfillment <code style="font-family:monospace;color:#aab4ff;">${escapeHtml(fulfillmentId)}</code>`)}
+
+    ${box(`
+      <div style="font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Ship to</div>
+      <div style="font-size:14px;color:#ffffff;font-weight:600;">${escapeHtml(shipTo.name)}</div>
+      <div style="font-size:13px;color:#d1d5db;margin-top:4px;">
+        ${escapeHtml(shipTo.line1)}${shipTo.line2 ? '<br/>' + escapeHtml(shipTo.line2) : ''}<br/>
+        ${escapeHtml(shipTo.city)}, ${escapeHtml(shipTo.state)} ${escapeHtml(shipTo.zip)}<br/>
+        ${escapeHtml(shipTo.country)}${shipTo.phone ? '<br/>' + escapeHtml(shipTo.phone) : ''}
+      </div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:10px;">Customer: ${escapeHtml(customerEmail)}</div>
+    `)}
+
+    <div style="margin:0 0 8px 0;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Items (drop-ship rates)</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;margin:0 0 16px 0;">
+      <thead>
+        <tr>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">SKU</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Item</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Qty</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Unit cost</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Line total</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="padding:12px;text-align:right;font-size:13px;font-weight:600;color:#9ca3af;">Total drop-ship cost</td>
+          <td style="padding:12px;text-align:right;font-size:14px;font-weight:700;color:#ffffff;">${fmt(totalCostCents)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    ${anyMissingCost ? `<div style="font-size:12px;color:#f59e0b;margin:0 0 14px 0;">⚠ One or more items are missing a drop-ship rate in our catalog. Please confirm pricing back to us before invoicing.</div>` : ''}
+
+    ${noteBlock}
+
+    ${p(`Reply to this email with tracking info as soon as the package ships and we'll relay it to the customer automatically.`)}
+  `
+
+  const itemsText = items
+    .map(
+      (it) =>
+        `  - ${it.sku ?? '—'}  ${it.name}  × ${it.quantity}  @ ${fmt(it.unitCostCents)} ea = ${fmt(lineTotal(it))}`,
+    )
+    .join('\n')
+
+  const text = `New order to fulfill — ${orderNumber}${isSinglePeptide ? '  [SINGLE PEPTIDE — DROP-SHIP RATE]' : ''}
+Facility: ${facilityName}
+Fulfillment: ${fulfillmentId}
+
+Ship to:
+${shipTo.name}
+${shipTo.line1}${shipTo.line2 ? '\n' + shipTo.line2 : ''}
+${shipTo.city}, ${shipTo.state} ${shipTo.zip}
+${shipTo.country}${shipTo.phone ? '\nPhone: ' + shipTo.phone : ''}
+Customer: ${customerEmail}
+
+Items (drop-ship rates):
+${itemsText}
+TOTAL: ${fmt(totalCostCents)}
+${anyMissingCost ? '\n⚠ One or more items are missing a drop-ship rate — please confirm before invoicing.\n' : ''}${notes ? `\nSpecial handling: ${notes}\n` : ''}
+Reply with tracking info when shipped.
+
+— The Vitality Project
+`
+
+  const subjectPrefix = isSinglePeptide ? '[Single peptide] ' : ''
+  return {
+    subject: `${subjectPrefix}New order ${orderNumber} → ${facilityName}`,
+    html: wrap(body, {
+      preheader: `${items.length} item${items.length === 1 ? '' : 's'} for ${shipTo.name} (${shipTo.city}, ${shipTo.state}). Total cost ${fmt(totalCostCents)}.`,
+    }),
+    text,
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Template: Abandoned Cart Recovery
+//
+// Sent to logged-in customers whose cart sat idle 1+ hours but is still
+// less than 7 days old (so we don't surface a stale week-old cart). The
+// abandoned-cart job dedupes by checking for a recent OutboundMessage
+// with subject prefix "[abandoned-cart]".
+// ──────────────────────────────────────────────────────────────────────────
+
+export function abandonedCart(args: {
+  name: string
+  items: Array<{ name: string; quantity: number; price: number }> // price in cents
+  cartUrl: string
+  unsubscribeUrl?: string
+}) {
+  const { name, items, cartUrl, unsubscribeUrl } = args
+  const subtotal = items.reduce((sum, it) => sum + it.price * it.quantity, 0)
+
+  const itemRows = items
+    .map(
+      (it) => `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:14px;color:#e5e7eb;">${escapeHtml(it.name)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#9ca3af;text-align:center;">${it.quantity}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e5e7eb;text-align:right;">$${(it.price / 100).toFixed(2)}</td>
+        </tr>`,
+    )
+    .join('')
+
+  const inner = `
+    ${h1(`You left something behind, ${escapeHtml(name)}`)}
+    ${p(`Your cart is waiting. We've held your items, but they won't last forever — popular peptides move fast.`)}
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;margin:16px 0;">
+      <thead>
+        <tr>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Item</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Qty</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Price</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2" style="padding:12px;text-align:right;font-size:13px;font-weight:600;color:#9ca3af;">Subtotal</td>
+          <td style="padding:12px;text-align:right;font-size:14px;font-weight:700;color:#ffffff;">$${(subtotal / 100).toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    ${button('Complete your order', cartUrl)}
+    ${p(`Questions? Just reply to this email.`)}
+  `
+
+  const text = `Hi ${name},
+
+You left some peptides in your cart at The Vitality Project. We've held them for you, but popular items move fast.
+
+${items.map((i) => `  - ${i.name} × ${i.quantity}  $${(i.price / 100).toFixed(2)}`).join('\n')}
+
+Subtotal: $${(subtotal / 100).toFixed(2)}
+
+Complete your order: ${cartUrl}
+
+— The Vitality Project
+${unsubscribeUrl ? `\nUnsubscribe: ${unsubscribeUrl}\n` : ''}`
+
+  return {
+    subject: `[abandoned-cart] You left ${items.length} item${items.length === 1 ? '' : 's'} in your cart`,
+    html: wrap(inner, {
+      preheader: `Your ${items.length} item${items.length === 1 ? '' : 's'} are waiting — $${(subtotal / 100).toFixed(2)}`,
+      includeMarketingFooter: true,
+    }),
+    text,
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Zelle payment flow — three templates:
+//   zelleOrderInstructions  → customer, immediately after placing order
+//   zelleOrderAdminAlert    → admin, on every new Zelle order
+//   zellePaymentConfirmed   → customer, after admin marks Zelle received
+// Order is created in PENDING / UNPAID state; nothing ships until admin
+// clicks "Mark Paid" in /admin/orders.
+// ──────────────────────────────────────────────────────────────────────────
+
+export function zelleOrderInstructions(args: {
+  orderNumber: string
+  customerName: string
+  items: OrderItemLine[]
+  subtotal: number
+  total: number
+  shippingAddress: ShippingAddressShape
+  zelleEmail: string
+  zelleDisplayName?: string
+  zellePhone?: string
+}) {
+  const {
+    orderNumber,
+    customerName,
+    items,
+    subtotal,
+    total,
+    shippingAddress,
+    zelleEmail,
+    zelleDisplayName,
+    zellePhone,
+  } = args
+
+  const itemsHtml = items
+    .map((it) => {
+      const lineTotal = it.total ?? it.price * it.quantity
+      return `<tr>
+        <td style="padding:8px 0;color:#e5e7eb;font-size:14px;">
+          ${escapeHtml(it.name)} <span style="color:#6b7280;">× ${it.quantity}</span>
+        </td>
+        <td align="right" style="padding:8px 0;color:#ffffff;font-size:14px;">${formatMoney(lineTotal)}</td>
+      </tr>`
+    })
+    .join('')
+
+  const addressHtml = [
+    escapeHtml(shippingAddress.name),
+    escapeHtml(shippingAddress.line1),
+    shippingAddress.line2 ? escapeHtml(shippingAddress.line2) : null,
+    `${escapeHtml(shippingAddress.city)}, ${escapeHtml(shippingAddress.state)} ${escapeHtml(shippingAddress.zip)}`,
+    shippingAddress.country ? escapeHtml(shippingAddress.country) : 'US',
+  ]
+    .filter(Boolean)
+    .join('<br/>')
+
+  const body = `
+    ${h1(`Order received, ${escapeHtml(customerName)}`)}
+    ${p(`We've reserved your items. The next step is yours: send payment via Zelle and we'll ship as soon as the funds arrive (usually same day).`)}
+
+    <div style="background:linear-gradient(180deg,rgba(98,112,242,0.16),rgba(98,112,242,0.06));border:1px solid rgba(98,112,242,0.45);border-radius:14px;padding:20px;margin:14px 0 18px;">
+      ${
+        zelleDisplayName
+          ? `<div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Recipient name</div>
+             <div style="font-size:16px;font-weight:600;color:#ffffff;margin-bottom:14px;">${escapeHtml(zelleDisplayName)}</div>`
+          : ''
+      }
+      <div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;">Send Zelle to</div>
+      <div style="font-size:20px;font-weight:700;color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;">${escapeHtml(zelleEmail)}</div>
+      ${
+        zellePhone
+          ? `<div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin:14px 0 6px;">Or by phone</div>
+             <div style="font-size:18px;font-weight:700;color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(zellePhone)}</div>`
+          : ''
+      }
+      <div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin:18px 0 8px;">Memo / note (REQUIRED)</div>
+      <div style="font-size:18px;font-weight:700;color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</div>
+      <div style="font-size:11px;color:#a5b4fc;letter-spacing:0.14em;text-transform:uppercase;margin:18px 0 8px;">Amount</div>
+      <div style="font-size:24px;font-weight:700;color:#ffffff;">${formatMoney(total)}</div>
+    </div>
+
+    ${p(`<strong style="color:#ffffff;">Important:</strong> include the order number <strong style="color:#ffffff;">#${escapeHtml(orderNumber)}</strong> in the Zelle memo so we can match your payment to this order. Without it, fulfillment is delayed.`)}
+
+    ${box(`
+      <div style="font-size:12px;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Order</div>
+      <div style="font-size:18px;font-weight:700;color:#ffffff;">#${escapeHtml(orderNumber)}</div>
+    `)}
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0;">
+      ${itemsHtml}
+      <tr><td colspan="2" style="padding:10px 0 0 0;"><div style="height:1px;background:rgba(255,255,255,0.08);"></div></td></tr>
+      <tr>
+        <td style="padding:8px 0;color:#9ca3af;font-size:14px;">Subtotal</td>
+        <td align="right" style="padding:8px 0;color:#e5e7eb;font-size:14px;">${formatMoney(subtotal)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#ffffff;font-size:15px;font-weight:700;">Total to send</td>
+        <td align="right" style="padding:8px 0;color:#ffffff;font-size:15px;font-weight:700;">${formatMoney(total)}</td>
+      </tr>
+    </table>
+
+    ${divider()}
+    <div style="font-size:12px;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">Shipping to</div>
+    <p style="margin:0 0 14px 0;font-size:14px;line-height:1.55;color:#d1d5db;">${addressHtml}</p>
+    ${button('View order', `${APP_URL}/account/orders`)}
+
+    ${p(`Questions? Reply to this email — a real human reads it.`)}
+
+    ${divider()}
+    <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:14px 16px;margin:8px 0 0;">
+      <p style="margin:0 0 6px 0;font-size:13px;font-weight:700;color:#ffffff;">All sales are final — no refunds</p>
+      <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;">We do not issue refunds under any circumstances, including shipping delays. The only remedy we offer is a replacement product when the original arrives with damaged packaging — contact us within 7 days of delivery with photos.</p>
+    </div>
+  `
+
+  const text = `Order received, ${customerName}
+
+We've reserved your items. Send payment via Zelle to complete your order:
+
+  Send Zelle to:  ${zelleEmail}
+  Memo / note:    #${orderNumber}    (REQUIRED — without this we can't match your payment)
+  Amount:         ${formatMoney(total)}
+
+Order #${orderNumber}
+
+${items.map((it) => `  ${it.name} x${it.quantity} — ${formatMoney(it.total ?? it.price * it.quantity)}`).join('\n')}
+
+Subtotal: ${formatMoney(subtotal)}
+Total to send: ${formatMoney(total)}
+
+Shipping to:
+${shippingAddress.name}
+${shippingAddress.line1}
+${shippingAddress.line2 ? shippingAddress.line2 + '\n' : ''}${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zip}
+${shippingAddress.country || 'US'}
+
+We ship as soon as Zelle funds arrive — usually same day. Reply with any questions.
+
+— The Vitality Project
+`
+
+  return {
+    subject: `Send Zelle to complete order #${orderNumber} — ${formatMoney(total)}`,
+    html: wrap(body, {
+      preheader: `Send ${formatMoney(total)} via Zelle to ${zelleEmail} — memo #${orderNumber}`,
+    }),
+    text,
+  }
+}
+
+export function zelleOrderAdminAlert(args: {
+  orderNumber: string
+  orderId: string
+  customerName: string
+  customerEmail: string
+  total: number
+  itemCount: number
+}) {
+  const { orderNumber, orderId, customerName, customerEmail, total, itemCount } = args
+
+  const body = `
+    ${h1(`New Zelle order — payment pending`)}
+    ${p(`A customer placed a Zelle order. They've been emailed instructions to send payment. When the Zelle hits, click "Mark Paid" to release fulfillment.`)}
+
+    ${box(`
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Order</td>
+          <td align="right" style="padding:6px 0;color:#ffffff;font-size:14px;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Customer</td>
+          <td align="right" style="padding:6px 0;color:#e5e7eb;font-size:14px;">${escapeHtml(customerName)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Email</td>
+          <td align="right" style="padding:6px 0;color:#e5e7eb;font-size:14px;">${escapeHtml(customerEmail)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#9ca3af;font-size:13px;">Items</td>
+          <td align="right" style="padding:6px 0;color:#e5e7eb;font-size:14px;">${itemCount}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;color:#ffffff;font-size:14px;font-weight:700;">Amount expected</td>
+          <td align="right" style="padding:6px 0;color:#ffffff;font-size:16px;font-weight:700;">${formatMoney(total)}</td>
+        </tr>
+      </table>
+    `)}
+
+    ${button('Open order in admin', `${APP_URL}/admin/orders/${orderId}`)}
+
+    ${p(`Customer was instructed to send Zelle with memo <strong style="color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</strong> so you can match the deposit to the order.`)}
+  `
+
+  const text = `New Zelle order — payment pending
+
+Order #${orderNumber}
+Customer: ${customerName} <${customerEmail}>
+Items: ${itemCount}
+Amount expected: ${formatMoney(total)}
+
+Customer was emailed Zelle instructions with memo #${orderNumber}.
+
+When the Zelle arrives, mark paid: ${APP_URL}/admin/orders/${orderId}
+`
+
+  return {
+    subject: `[Zelle pending] Order #${orderNumber} — ${formatMoney(total)}`,
+    html: wrap(body, {
+      preheader: `${customerName} placed a ${formatMoney(total)} Zelle order — awaiting deposit`,
+    }),
+    text,
+  }
+}
+
+export function zellePaymentConfirmed(args: {
+  orderNumber: string
+  customerName: string
+  total: number
+}) {
+  const { orderNumber, customerName, total } = args
+
+  const body = `
+    ${h1(`Payment received — fulfilling now`)}
+    ${p(`Hey ${escapeHtml(customerName)}, we received your Zelle payment of <strong style="color:#ffffff;">${formatMoney(total)}</strong> for order <strong style="color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">#${escapeHtml(orderNumber)}</strong>. Your order is moving into fulfillment now.`)}
+    ${p(`We'll email tracking info as soon as it ships.`)}
+    ${box(`
+      <div style="font-size:12px;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Order</div>
+      <div style="font-size:18px;font-weight:700;color:#ffffff;">#${escapeHtml(orderNumber)}</div>
+      <div style="font-size:13px;color:#9ca3af;margin-top:10px;">Status: <span style="color:#34d399;font-weight:700;">Paid · Processing</span></div>
+    `)}
+    ${button('View order', `${APP_URL}/account/orders`)}
+    ${p(`Reply with any questions.`)}
+  `
+
+  const text = `Payment received — fulfilling now
+
+Hey ${customerName},
+
+We received your Zelle payment of ${formatMoney(total)} for order #${orderNumber}. Your order is moving into fulfillment.
+
+We'll email tracking info as soon as it ships.
+
+View order: ${APP_URL}/account/orders
+
+— The Vitality Project
+`
+
+  return {
+    subject: `Payment received — order #${orderNumber} is being fulfilled`,
+    html: wrap(body, {
+      preheader: `We got your Zelle for ${formatMoney(total)} — order #${orderNumber} is moving`,
+    }),
+    text,
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Customer Zelle payment reminder — pinged for orders that have been
+// PENDING+UNPAID for 3+ days. Polite, single send per order.
+// Returns RAW HTML (not wrapped in subject/text shell) for direct
+// `sendEmail({ html })` use from the cron route.
+// ──────────────────────────────────────────────────────────────────────
+export function paymentReminder(args: {
+  name: string | null
+  orderNumber: string
+  amountCents: number
+  ageDays: number
+}): string {
+  const { name, orderNumber, amountCents, ageDays } = args
+  const greeting = name ? `Hi ${name.split(" ")[0]}` : "Hi"
+  const amount = `$${(amountCents / 100).toFixed(2)}`
+  const zelleEmail = process.env.ZELLE_RECIPIENT_EMAIL ?? "billing@thevitalityproject.com"
+  const zellePhone = process.env.ZELLE_RECIPIENT_PHONE ?? ""
+
+  const body = `
+    <h1 style="font:600 20px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;margin:0 0 12px;">A quick reminder about your order</h1>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">${greeting},</p>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">
+      Just a friendly heads-up — your order
+      <strong>#${orderNumber}</strong> placed ${ageDays} day${ageDays === 1 ? "" : "s"} ago is still
+      waiting on Zelle payment of <strong>${amount}</strong>. Once funds arrive
+      we ship the same day, so getting it sent now is the fastest path.
+    </p>
+    <div style="background:#f1f5f9;border-radius:10px;padding:16px;margin:0 0 14px;">
+      <p style="font:12px/1.4 -apple-system,sans-serif;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Zelle to</p>
+      <p style="font:600 15px/1.4 -apple-system,sans-serif;color:#0f172a;margin:0 0 4px;">${zelleEmail}</p>
+      ${zellePhone ? `<p style="font:14px/1.4 -apple-system,sans-serif;color:#475569;margin:0 0 8px;">or ${zellePhone}</p>` : ""}
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;">
+        <strong>Memo / note:</strong> ${orderNumber}
+      </p>
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;">
+        <strong>Amount:</strong> ${amount}
+      </p>
+    </div>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#64748b;margin:0 0 8px;">
+      Already sent it? Ignore this email — we'll catch up to the deposit
+      and get your order moving. Replies come straight to our team if
+      anything's off.
+    </p>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#94a3b8;margin:18px 0 0;">— The Vitality Project</p>
+  `
+  return `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">${body}</div></body></html>`
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Membership invoice — sent when a user signs up for CLUB / PLUS /
+// PREMIUM. Tells them how to Zelle the first month so we activate.
+// ──────────────────────────────────────────────────────────────────────
+export function membershipInvoice(args: {
+  name: string | null
+  planLabel: string
+  amountCents: number
+  invoiceNumber: string
+}): string {
+  const { name, planLabel, amountCents, invoiceNumber } = args
+  const greeting = name ? `Hi ${name.split(" ")[0]}` : "Hi"
+  const amount = `$${(amountCents / 100).toFixed(2)}`
+  const zelleEmail = process.env.ZELLE_RECIPIENT_EMAIL ?? "billing@thevitalityproject.com"
+  const zellePhone = process.env.ZELLE_RECIPIENT_PHONE ?? ""
+
+  const body = `
+    <h1 style="font:600 20px/1.3 -apple-system,sans-serif;color:#0f172a;margin:0 0 12px;">Welcome to ${planLabel}</h1>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">${greeting},</p>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">
+      Thanks for joining The Vitality Project. To activate your <strong>${planLabel}</strong>
+      membership, send <strong>${amount}</strong> via Zelle. Membership turns on the
+      moment funds arrive — usually same day.
+    </p>
+    <div style="background:#f1f5f9;border-radius:10px;padding:16px;margin:0 0 14px;">
+      <p style="font:12px/1.4 -apple-system,sans-serif;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Zelle to</p>
+      <p style="font:600 15px/1.4 -apple-system,sans-serif;color:#0f172a;margin:0 0 4px;">${zelleEmail}</p>
+      ${zellePhone ? `<p style="font:14px/1.4 -apple-system,sans-serif;color:#475569;margin:0 0 8px;">or ${zellePhone}</p>` : ""}
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;"><strong>Memo / note:</strong> ${invoiceNumber}</p>
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;"><strong>Amount:</strong> ${amount}</p>
+    </div>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#64748b;margin:0 0 8px;">
+      Once your membership is active you'll get the discount on every order,
+      free bac water + syringes (Plus + Premium), and 1–3 free peptides per
+      cycle (Plus + Premium). Cancel anytime by replying to this email.
+    </p>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#94a3b8;margin:18px 0 0;">— The Vitality Project</p>
+  `
+  return `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">${body}</div></body></html>`
 }

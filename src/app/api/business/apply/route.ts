@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { slugify } from '@/lib/utils'
-import bcrypt from 'bcryptjs'
 import { sendEmail } from '@/lib/email'
 import { newBusinessApplication } from '@/lib/email-templates'
 import { createAdminNotification } from '@/lib/notifications'
+import { generateUniqueTrainerCode } from '@/lib/trainer'
+import { checkRateLimit, tooManyRequests } from '@/lib/rate-limit'
+import { verifyTurnstile } from '@/lib/turnstile'
 
 export async function POST(req: NextRequest) {
+  // Tighter limit on B2B applications — they're meaningful records and
+  // 3/hour from one IP is plenty for legitimate gym owners.
+  const rl = checkRateLimit(req, 'business-apply', { limit: 3, windowMs: 60 * 60_000 })
+  if (!rl.allowed) return tooManyRequests(rl.retryAfter)
+
   try {
     const body = await req.json()
-    const { businessName, type, contactName, email, phone, website, reason } = body
+    const { businessName, type, contactName, email, phone, website, reason, turnstileToken } = body
+
+    // Bot check — Turnstile widget produces turnstileToken on the client.
+    // No-ops in dev when TURNSTILE_SECRET_KEY isn't set.
+    const captchaOk = await verifyTurnstile(
+      turnstileToken,
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
+    )
+    if (!captchaOk) {
+      return NextResponse.json({ error: 'Verification failed. Please try again.' }, { status: 400 })
+    }
 
     if (!businessName || !type || !contactName || !email || !phone) {
       return NextResponse.json(
@@ -32,16 +49,15 @@ export async function POST(req: NextRequest) {
     })
 
     if (!user) {
-      // Create user with a temporary password hash
-      const tempPassword = await bcrypt.hash(
-        Math.random().toString(36).slice(2) + Date.now().toString(36),
-        10
-      )
+      // Create user without a password — admin will trigger an activation
+      // email (with a 7-day reset token) when they approve the application.
+      // No plaintext-credential leak; user sets their own password via the
+      // standard reset-password flow.
       user = await prisma.user.create({
         data: {
           email: email.toLowerCase(),
           name: contactName,
-          passwordHash: tempPassword,
+          passwordHash: null,
           role: 'CUSTOMER',
         },
       })
@@ -76,12 +92,14 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create owner membership
+    // Create owner membership with auto-generated personal referral code
+    const ownerCode = await generateUniqueTrainerCode(contactName)
     await prisma.orgMember.create({
       data: {
         organizationId: organization.id,
         userId: user.id,
         role: 'OWNER',
+        referralCode: ownerCode,
       },
     })
 

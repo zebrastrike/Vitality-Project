@@ -4,10 +4,11 @@ import { type InputHTMLAttributes, forwardRef } from 'react'
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
+  hint?: string
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, ...props }, ref) => {
+  ({ className, label, error, hint, ...props }, ref) => {
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -27,6 +28,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && <p className="text-xs text-red-400">{error}</p>}
+        {!error && hint && <p className="text-xs text-white/40">{hint}</p>}
       </div>
     )
   }

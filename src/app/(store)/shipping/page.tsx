@@ -31,12 +31,16 @@ export default function ShippingPage() {
             body: 'A tracking number will be provided via email once your order has shipped. You can also view tracking information in your account under Order History.',
           },
           {
-            title: 'Lost or Damaged Shipments',
-            body: 'If your order arrives damaged or is lost in transit, contact us within 7 days of the expected delivery date. We will work with the carrier to resolve the issue and reship or refund as appropriate.',
+            title: 'Damaged Packaging — Replacement Only',
+            body: 'If your order arrives with damaged packaging, contact us within 7 days of delivery with photos. We will ship a replacement at no cost. Replacement is the only remedy offered — no refunds are issued for damaged shipments.',
           },
           {
-            title: 'Returns',
-            body: 'Due to the nature of research compounds, we do not accept returns on opened products. Unopened, unaltered products may be returned within 14 days of delivery for store credit. Contact us before shipping anything back.',
+            title: 'No Refunds',
+            body: 'All sales are final. We do not issue refunds under any circumstances — including shipping delays, carrier issues, change of mind, or any other reason. The only remedy we offer is a replacement product when the original arrives with damaged packaging (see above).',
+          },
+          {
+            title: 'Shipping Delays',
+            body: 'Carrier delays are outside our control. Once your package leaves our facility, transit time is the carrier\'s responsibility. Shipping delays do not qualify for refunds, store credit, or expedited reshipment.',
           },
           {
             title: 'Legal Compliance',

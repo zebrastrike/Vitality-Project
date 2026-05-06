@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Eye, Download } from 'lucide-react'
+import { MarkPaidButton } from '@/components/admin/mark-paid-button'
 
 export default async function AdminOrdersPage() {
   const orders = await prisma.order.findMany({
@@ -66,13 +67,23 @@ export default async function AdminOrdersPage() {
                   <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
                 </td>
                 <td className="px-5 py-4">
-                  <Badge variant={paymentVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={paymentVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+                    {order.paymentMethod === 'zelle' && (
+                      <span className="text-[10px] uppercase tracking-wider text-white/40">via Zelle</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-4 text-sm text-white/40">{formatDate(order.createdAt)}</td>
                 <td className="px-5 py-4">
-                  <Link href={`/admin/orders/${order.id}`} className="p-1.5 text-white/30 hover:text-white transition-colors">
-                    <Eye className="w-4 h-4" />
-                  </Link>
+                  <div className="flex items-center justify-end gap-2">
+                    {order.paymentMethod === 'zelle' && order.paymentStatus === 'UNPAID' && (
+                      <MarkPaidButton orderId={order.id} />
+                    )}
+                    <Link href={`/admin/orders/${order.id}`} className="p-1.5 text-white/30 hover:text-white transition-colors">
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

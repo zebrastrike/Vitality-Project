@@ -17,15 +17,35 @@ export function VitalityVeins() {
   const animRef = useRef<number>(0)
   const pointerRef = useRef({ x: -1, y: -1, down: false })
   const activeCardRef = useRef<Element | null>(null)
-  const activeCardCenterRef = useRef({ x: 0, y: 0 })
+  const activeCardRectRef = useRef<{ left: number; top: number; right: number; bottom: number } | null>(null)
   const activeCardTimeRef = useRef(0)
   const timeRef = useRef(0)
   const nodesRef = useRef<Float32Array>(new Float32Array(0))
   const edgesRef = useRef<Uint32Array>(new Uint32Array(0))
   const nodeCountRef = useRef(0)
   const edgeCountRef = useRef(0)
+  // All glass-card rects on screen — keeps the network from drawing inside them
+  const cardRectsRef = useRef<Array<{ left: number; top: number; right: number; bottom: number }>>([])
+  const cardRefreshRef = useRef(0)
 
   const R = 120, G = 160, B = 255
+
+  // Helper: is point inside any cached card rect?
+  const isInsideCard = (x: number, y: number): boolean => {
+    const rects = cardRectsRef.current
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i]
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true
+    }
+    return false
+  }
+
+  // Helper: shortest distance from point to rectangle perimeter (0 if inside)
+  const distToRect = (x: number, y: number, r: { left: number; top: number; right: number; bottom: number }) => {
+    const dx = Math.max(r.left - x, 0, x - r.right)
+    const dy = Math.max(r.top - y, 0, y - r.bottom)
+    return Math.sqrt(dx * dx + dy * dy)
+  }
 
   const buildNetwork = useCallback(() => {
     const vw = window.innerWidth
@@ -96,18 +116,36 @@ export function VitalityVeins() {
     ctx.save()
     ctx.scale(dpr, dpr)
 
+    // ── Refresh glass card rects every ~250ms (debounced via frame timer) ──
+    if (time - cardRefreshRef.current > 250) {
+      cardRefreshRef.current = time
+      const els = document.querySelectorAll('.glass, .glass-elevated, .card-hover')
+      const rects: Array<{ left: number; top: number; right: number; bottom: number }> = []
+      els.forEach((el) => {
+        const r = el.getBoundingClientRect()
+        // Only include visible rects on-screen
+        if (r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw) {
+          rects.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom })
+        }
+      })
+      cardRectsRef.current = rects
+    }
+
     // ── Ambient breathing ──
     const breathe = 0.35 + 0.12 * Math.sin(t * 0.7) + 0.06 * Math.sin(t * 1.4 + 0.5)
 
-    // ── Pointer pulse injection (mouse drag or touch) ──
-    if (ptr.x > 0) {
+    // ── Pointer pulse injection — only OUTSIDE cards ──
+    if (ptr.x > 0 && !isInsideCard(ptr.x, ptr.y)) {
       const radius = ptr.down ? 220 : 160
       const intensity = ptr.down ? 0.35 : 0.2
       const r2 = radius * radius
       for (let i = 0; i < nodeCount; i++) {
         const ni = i * 4
-        const dx = nodes[ni] - ptr.x
-        const dy = nodes[ni + 1] - ptr.y
+        const nx = nodes[ni], ny = nodes[ni + 1]
+        // Skip nodes inside cards — preserves card "clean zone"
+        if (isInsideCard(nx, ny)) continue
+        const dx = nx - ptr.x
+        const dy = ny - ptr.y
         const d2 = dx * dx + dy * dy
         if (d2 < r2) {
           const s = 1 - Math.sqrt(d2) / radius
@@ -116,75 +154,76 @@ export function VitalityVeins() {
       }
     }
 
-    // ── Active card — CHARGE AND BLAST ──
-    // Card acts as an energy source. Charges up, then blasts a massive
-    // shockwave across the entire screen through the vein network.
+    // ── Active card — pulses radiate FROM the perimeter outward ──
+    // The card stays clean. Energy emits from its edges into the surrounding mesh.
     const card = activeCardRef.current
     if (card) {
       activeCardTimeRef.current += dt
       const ht = activeCardTimeRef.current
 
-      const cx = activeCardCenterRef.current.x
-      const cy = activeCardCenterRef.current.y
+      // Refresh active card rect each frame to track scroll/layout
+      const cr = card.getBoundingClientRect()
+      const cardRect = { left: cr.left, top: cr.top, right: cr.right, bottom: cr.bottom }
+      activeCardRectRef.current = cardRect
 
-      // Heartbeat rhythm — controls blast timing
-      const beatCycle = 1.4 // seconds per beat
-      const beatPhase = (ht % beatCycle) / beatCycle // 0-1
+      // Heartbeat rhythm
+      const beatCycle = 1.4
+      const beatPhase = (ht % beatCycle) / beatCycle
 
-      // Phase 0-0.3: CHARGE — energy gathers at the card
-      // Phase 0.3-1.0: BLAST — shockwave expands outward
       const isCharging = beatPhase < 0.3
-      const blastPhase = isCharging ? 0 : (beatPhase - 0.3) / 0.7 // 0-1 during blast
+      const blastPhase = isCharging ? 0 : (beatPhase - 0.3) / 0.7
+
+      // Pre-compute perimeter "halo" — nodes within N px of the rect's edge
+      const haloMax = isCharging ? 220 : 280
 
       if (isCharging) {
-        // Charge: bright glow builds at card center, pulls energy inward
         const chargeStr = Math.pow(beatPhase / 0.3, 2) * 0.9
-        const chargeR = 250
-        const chargeR2 = chargeR * chargeR
         for (let i = 0; i < nodeCount; i++) {
           const ni = i * 4
-          const dx = nodes[ni] - cx
-          const dy = nodes[ni + 1] - cy
-          const d2 = dx * dx + dy * dy
-          if (d2 < chargeR2) {
-            const s = 1 - Math.sqrt(d2) / chargeR
+          const nx = nodes[ni], ny = nodes[ni + 1]
+          // Skip everything inside any card (card is a "clean zone")
+          if (isInsideCard(nx, ny)) continue
+          const d = distToRect(nx, ny, cardRect)
+          if (d < haloMax) {
+            const s = 1 - d / haloMax
             nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * chargeStr * dt * 10)
           }
         }
       } else {
-        // BLAST: expanding ring shockwave — massive, screen-filling
-        const maxRadius = Math.max(vw, vh) * 1.2 // covers entire screen
+        // BLAST: shockwave radiating outward from the card perimeter
+        const maxRadius = Math.max(vw, vh) * 1.2
         const ringRadius = blastPhase * maxRadius
-        const ringWidth = 200 + blastPhase * 100 // widens as it expands
-        const ringStrength = (1 - blastPhase * 0.6) * 0.95 // stays strong
+        const ringWidth = 200 + blastPhase * 100
+        const ringStrength = (1 - blastPhase * 0.6) * 0.95
 
         for (let i = 0; i < nodeCount; i++) {
           const ni = i * 4
-          const dx = nodes[ni] - cx
-          const dy = nodes[ni + 1] - cy
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          const ringDist = Math.abs(dist - ringRadius)
-
+          const nx = nodes[ni], ny = nodes[ni + 1]
+          // Cards are clean zones — skip
+          if (isInsideCard(nx, ny)) continue
+          // Distance from this node to the closest point on the card perimeter
+          const dToEdge = distToRect(nx, ny, cardRect)
+          const ringDist = Math.abs(dToEdge - ringRadius)
           if (ringDist < ringWidth) {
             const s = 1 - ringDist / ringWidth
             nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * s * ringStrength * dt * 18)
           }
         }
 
-        // Keep the card center glowing hot during blast
-        const coreR = 150
-        const coreR2 = coreR * coreR
+        // Keep the perimeter glowing hot during blast (inner halo)
         for (let i = 0; i < nodeCount; i++) {
           const ni = i * 4
-          const dx = nodes[ni] - cx
-          const dy = nodes[ni + 1] - cy
-          const d2 = dx * dx + dy * dy
-          if (d2 < coreR2) {
-            const s = 1 - Math.sqrt(d2) / coreR
+          const nx = nodes[ni], ny = nodes[ni + 1]
+          if (isInsideCard(nx, ny)) continue
+          const d = distToRect(nx, ny, cardRect)
+          if (d < 150) {
+            const s = 1 - d / 150
             nodes[ni + 2] = Math.min(1, nodes[ni + 2] + s * 0.5 * dt * 8)
           }
         }
       }
+    } else {
+      activeCardRectRef.current = null
     }
 
     // ── Pulse diffusion (4 passes — energy spreads fast) ──
@@ -204,7 +243,7 @@ export function VitalityVeins() {
       nodes[i * 4 + 2] *= 0.945
     }
 
-    // ── Draw edges ──
+    // ── Draw edges — skip any segment with either endpoint inside a card ──
     ctx.lineCap = 'round'
     for (let e = 0; e < edgeCount; e++) {
       const ei = e * 2
@@ -215,6 +254,8 @@ export function VitalityVeins() {
       const bx = nodes[bi], by = nodes[bi + 1]
       if ((ax < -30 && bx < -30) || (ax > vw + 30 && bx > vw + 30)) continue
       if ((ay < -30 && by < -30) || (ay > vh + 30 && by > vh + 30)) continue
+      // Cards are clean zones — skip edges that touch card interiors
+      if (isInsideCard(ax, ay) || isInsideCard(bx, by)) continue
 
       const avgPulse = (nodes[ai + 2] + nodes[bi + 2]) * 0.5
       const baseA = (nodes[ai + 3] + nodes[bi + 3]) * 0.5 * breathe
@@ -230,7 +271,7 @@ export function VitalityVeins() {
       ctx.stroke()
     }
 
-    // ── Draw pulse nodes ──
+    // ── Draw pulse nodes — skip nodes inside cards ──
     for (let i = 0; i < nodeCount; i++) {
       const ni = i * 4
       const p = nodes[ni + 2]
@@ -238,6 +279,7 @@ export function VitalityVeins() {
 
       const x = nodes[ni], y = nodes[ni + 1]
       if (x < -10 || x > vw + 10 || y < -10 || y > vh + 10) continue
+      if (isInsideCard(x, y)) continue
 
       // Core dot
       const r = 0.3 + p * 2.5
@@ -296,7 +338,7 @@ export function VitalityVeins() {
         activeCardRef.current = card
         activeCardTimeRef.current = 0
         const cr = card.getBoundingClientRect()
-        activeCardCenterRef.current = { x: cr.left + cr.width / 2, y: cr.top + cr.height / 2 }
+        activeCardRectRef.current = { left: cr.left, top: cr.top, right: cr.right, bottom: cr.bottom }
       }
     }
 
@@ -312,7 +354,7 @@ export function VitalityVeins() {
         activeCardRef.current = card
         activeCardTimeRef.current = 0
         const cr = card.getBoundingClientRect()
-        activeCardCenterRef.current = { x: cr.left + cr.width / 2, y: cr.top + cr.height / 2 }
+        activeCardRectRef.current = { left: cr.left, top: cr.top, right: cr.right, bottom: cr.bottom }
       }
     }
 

@@ -46,8 +46,8 @@ export default function TermsPage() {
             body: 'Title and risk of loss for products pass to the buyer upon shipment. The Vitality Project is not responsible for lost or stolen packages once confirmed as delivered by the carrier.',
           },
           {
-            title: '6. Refunds & Returns',
-            body: 'Unopened products may be returned within 14 days of delivery for store credit, minus shipping. We do not accept returns on opened products. Contact us before returning any item.',
+            title: '6. No Refunds — Replacement Only for Damaged Packaging',
+            body: 'All sales are final. We do not issue refunds under any circumstances — including shipping delays, carrier issues, change of mind, partial dissatisfaction, or for any other reason. We do not accept returns. The only remedy we offer is a replacement product when the original arrives with damaged packaging; contact us within 7 days of delivery with photos.',
           },
           {
             title: '7. Limitation of Liability',

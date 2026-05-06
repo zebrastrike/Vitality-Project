@@ -40,12 +40,11 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
             <Image
-              src="/logo-white.png"
+              src="/logo-light.png"
               alt="The Vitality Project"
-              width={200}
-              height={200}
-              className="h-14 w-auto object-contain"
-              style={{ mixBlendMode: 'lighten' }}
+              width={500}
+              height={500}
+              className="h-16 w-auto object-contain"
               priority
             />
           </Link>
@@ -98,9 +97,12 @@ export function Navbar() {
 
             <Link
               href="/membership"
-              className="text-sm text-brand-300 hover:text-brand-200 transition-colors font-medium"
+              className="text-sm text-brand-300 hover:text-brand-200 transition-colors font-medium flex items-center gap-1.5"
             >
               Membership
+              <span className="text-[9px] uppercase tracking-wider bg-brand-500/20 border border-brand-500/30 text-brand-300 px-1.5 py-0.5 rounded-full font-semibold">
+                Soon
+              </span>
             </Link>
 
             <Link
@@ -215,9 +217,12 @@ export function Navbar() {
           <Link
             href="/membership"
             onClick={() => setMobileOpen(false)}
-            className="block px-3 py-2 text-brand-300 font-medium hover:text-brand-200 transition-colors rounded-lg hover:bg-white/5"
+            className="px-3 py-2 text-brand-300 font-medium hover:text-brand-200 transition-colors rounded-lg hover:bg-white/5 flex items-center gap-2"
           >
             Membership
+            <span className="text-[9px] uppercase tracking-wider bg-brand-500/20 border border-brand-500/30 text-brand-300 px-1.5 py-0.5 rounded-full font-semibold">
+              Soon
+            </span>
           </Link>
           <Link
             href="/blog"

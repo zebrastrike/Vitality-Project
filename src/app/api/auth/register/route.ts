@@ -3,23 +3,44 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { randomBytes } from 'crypto'
 import { z } from 'zod'
+import { cookies } from 'next/headers'
 import { sendEmail } from '@/lib/email'
 import { welcomeEmail, emailVerification } from '@/lib/email-templates'
+import { TRAINER_ATTRIBUTION_COOKIE, attributeUserToTrainer } from '@/lib/trainer'
+
+// Username: 3–24 chars, alphanumeric + underscore + dash + dot, must
+// start with a letter or digit. Case-insensitive uniqueness enforced
+// downstream by lowercasing before write.
+const USERNAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,23}$/
 
 const schema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
   password: z.string().min(8),
+  // Optional — accounts that don't pick one stay email-only
+  username: z
+    .string()
+    .regex(USERNAME_REGEX, 'Username must be 3-24 chars (letters, numbers, _ . -); start with a letter or digit')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
 })
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { name, email, password } = schema.parse(body)
+    const { name, email, password, username } = schema.parse(body)
+    const usernameLower = username?.toLowerCase()
 
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
     if (existing) {
       return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
+    }
+
+    if (usernameLower) {
+      const usernameClash = await prisma.user.findUnique({ where: { username: usernameLower } })
+      if (usernameClash) {
+        return NextResponse.json({ error: 'Username already taken' }, { status: 400 })
+      }
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
@@ -29,10 +50,26 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         email: email.toLowerCase(),
+        username: usernameLower,
         passwordHash,
         verifyToken,
       },
     })
+
+    // Trainer attribution (if visitor arrived via /join/<code>) — non-blocking
+    try {
+      const cookieStore = await cookies()
+      const trainerCode = cookieStore.get(TRAINER_ATTRIBUTION_COOKIE)?.value
+      if (trainerCode) {
+        await attributeUserToTrainer(user.id, trainerCode)
+        // Clear the cookie so it doesn't auto-attribute future signups on
+        // this device (e.g. spouse signing up next)
+        cookieStore.delete(TRAINER_ATTRIBUTION_COOKIE)
+      }
+    } catch (err) {
+      console.error('Trainer attribution on signup failed:', err)
+      // Never block account creation on attribution
+    }
 
     // Fire-and-forget — never block the signup flow on email delivery
     void (async () => {

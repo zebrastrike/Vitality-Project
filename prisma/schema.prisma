@@ -13,6 +13,11 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  // Optional handle. Users pick this on first activation / signup;
+  // unique across the platform when set. Login accepts either email
+  // or username, falling back to email for legacy accounts that have
+  // no username yet.
+  username      String?   @unique
   name          String?
   passwordHash  String?
   role          UserRole  @default(CUSTOMER)
@@ -33,6 +38,8 @@ model User {
   loyalty       LoyaltyAccount?
   storeCredit   StoreCredit?
   supportTickets SupportTicket[]
+  membership    Membership?
+  refundsCreated Refund[]    @relation("RefundCreatedBy")
 
   verifyToken      String?   @unique
   resetToken       String?   @unique
@@ -58,6 +65,12 @@ model Organization {
   slug      String    @unique
   type      OrgType
   status    OrgStatus @default(ACTIVE)
+  // 4-6 digit PIN that protects the "Exit kiosk" button on this org's
+  // iPad displays. Null = exit is unprotected (default for orgs that
+  // haven't set one). Stored as plaintext intentionally — it's a curious-
+  // customer guard, not a security boundary; the real auth lives at
+  // /admin via NextAuth.
+  kioskPin  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -103,11 +116,19 @@ model OrgMember {
   role           OrgMemberRole
   locationId     String?
 
+  // Personal trainer/coach referral code — used by /join?t=<code> to attribute
+  // new customer signups to this trainer. Optional because OWNER/ADMIN don't
+  // typically need one; auto-generated for STAFF/COACH/DOCTOR on creation.
+  referralCode   String?      @unique
+
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   location       Location?    @relation(fields: [locationId], references: [id])
 
+  attributedClients OrgClient[] @relation("TrainerAttributedClients")
+
   @@unique([organizationId, userId])
+  @@index([referralCode])
   @@map("org_members")
 }
 
@@ -118,12 +139,18 @@ model OrgClient {
   locationId     String?
   status         ClientStatus @default(ACTIVE)
 
+  // Trainer / coach attribution — which OrgMember "owns" this client.
+  // Lifetime — set on first attribution and survives unless admin reassigns.
+  trainerOrgMemberId String?
+  trainer            OrgMember? @relation("TrainerAttributedClients", fields: [trainerOrgMemberId], references: [id], onDelete: SetNull)
+
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   location       Location?    @relation(fields: [locationId], references: [id])
   orders         Order[]
 
   @@unique([organizationId, userId])
+  @@index([trainerOrgMemberId])
   @@map("org_clients")
 }
 
@@ -379,6 +406,7 @@ model Order {
   client         OrgClient?    @relation(fields: [clientId], references: [id])
   commissions    OrderCommission[]
   fulfillments   Fulfillment[]
+  refunds        Refund[]
   storeCreditUsed Int          @default(0)
   loyaltyPointsUsed Int        @default(0)
   loyaltyPointsEarned Int      @default(0)
@@ -428,6 +456,45 @@ model OrderItem {
   fulfillmentItems FulfillmentItem[]
 
   @@map("order_items")
+}
+
+// ─── Refunds ─────────────────────────────────────────────────────────────────
+// First-class refund record. Created by admin from /admin/orders/[id]. Cash
+// refunds (Chase / Stripe) and store-credit refunds both write a row here so
+// the P&L on /admin can sum a single source of truth instead of inferring
+// from StoreCreditTxn for credit-only refunds.
+model Refund {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount      Int          // in cents — always positive
+  method      RefundMethod @default(STORE_CREDIT)
+  reason      String?      @db.Text
+  // External processor reference (Chase orbital ID / Stripe refund ID / store
+  // credit txn id). Null until the actual refund is initiated.
+  externalRef String?
+  status      RefundStatus @default(PENDING)
+  // Admin who initiated. Null when triggered by an automated webhook flow.
+  createdById String?
+  createdBy   User?        @relation("RefundCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+  processedAt DateTime?
+
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("refunds")
+}
+
+enum RefundMethod {
+  CASH           // back to original payment method (card)
+  STORE_CREDIT   // issued as store credit
+  MANUAL         // recorded out-of-band (check, ACH, etc.)
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
 }
 
 // ─── Addresses ───────────────────────────────────────────────────────────────
@@ -1223,4 +1290,35 @@ model CommunicationPreference {
   updatedAt       DateTime @updatedAt
 
   @@map("communication_preferences")
+}
+
+// ─── Membership Tiers (Vitality Club) ───────────────────────────────────────
+
+model Membership {
+  id                            String         @id @default(cuid())
+  userId                        String         @unique
+  tier                          MembershipTier @default(NONE)
+  status                        String         @default("ACTIVE") // ACTIVE / PAUSED / CANCELLED
+  monthlyPriceCents             Int            @default(0)
+  startedAt                     DateTime       @default(now())
+  renewsAt                      DateTime?
+  cancelledAt                   DateTime?
+  // Free peptide credits earned per billing period (Plus = 1, Premium = 3)
+  freePeptideCreditsThisPeriod  Int            @default(0)
+  freePeptidesUsedThisPeriod    Int            @default(0)
+  // Stripe-style subscription tracking — Chase will go here when ready
+  externalSubscriptionId        String?
+  paymentProvider               String?        // 'chase', 'stripe', etc.
+  user                          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                     DateTime       @default(now())
+  updatedAt                     DateTime       @updatedAt
+
+  @@map("memberships")
+}
+
+enum MembershipTier {
+  NONE
+  CLUB     // $25/mo
+  PLUS     // $150/mo
+  PREMIUM  // $300/mo
 }

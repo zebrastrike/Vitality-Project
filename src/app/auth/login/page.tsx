@@ -27,7 +27,7 @@ export default function LoginPage() {
     })
 
     if (res?.error) {
-      setError('Invalid email or password')
+      setError('Invalid email/username or password')
       setLoading(false)
     } else {
       router.push('/')
@@ -49,12 +49,13 @@ export default function LoginPage() {
         <div className="glass rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              label="Email"
-              type="email"
+              label="Email or username"
+              type="text"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="you@example.com or your username"
+              autoComplete="username"
               error={error}
             />
             <Input
@@ -76,6 +77,25 @@ export default function LoginPage() {
               Create one
             </Link>
           </p>
+
+          {/* B2B partner path */}
+          <div className="mt-6 pt-6 border-t border-white/10">
+            <div className="text-center">
+              <p className="text-xs uppercase tracking-widest text-brand-300/70 mb-2">For Partners</p>
+              <p className="text-sm text-white/50 mb-3">
+                Run a gym, clinic, or wellness practice?
+              </p>
+              <Link
+                href="/business/apply"
+                className="inline-flex items-center gap-1.5 text-sm text-brand-400 hover:text-brand-300 font-medium"
+              >
+                Become a Vitality Partner →
+              </Link>
+              <p className="text-[11px] text-white/30 mt-2">
+                Earn commission on every sale through your location
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

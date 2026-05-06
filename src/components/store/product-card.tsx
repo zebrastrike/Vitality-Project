@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Clock, Sparkles } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import type { ProductWithImages } from '@/types'
@@ -12,40 +12,35 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const image = product.images?.[0]
   const discountPct = product.comparePrice
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : null
+
+  // Edward's call (2026-05): every product card uses the same branded
+  // peptide-vial image for visual consistency until per-product photography
+  // is shot. Overrides any DB ProductImage rows. Reverse by switching back
+  // to product.images?.[0] on this line.
+  const cardImage = "/products/vial-default-600.png"
 
   return (
     <Link href={`/products/${product.slug}`}>
       <div className="group glass rounded-2xl overflow-hidden card-hover cursor-pointer">
         {/* Image */}
         <div className="relative aspect-square bg-dark-800">
-          {image ? (
-            <Image
-              src={image.url}
-              alt={image.alt ?? product.name}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-white/10">
-              <span className="text-4xl font-bold">VP</span>
-            </div>
-          )}
+          <Image
+            src={cardImage}
+            alt={product.name}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+          />
+
           {discountPct && (
             <div className="absolute top-3 left-3 bg-brand-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
               -{discountPct}%
             </div>
           )}
 
-          {/* COMING SOON overlay */}
-          <div className="absolute inset-0 bg-dark-900/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Clock className="w-6 h-6 text-brand-300 mb-2" />
-            <span className="text-white font-semibold text-sm">Coming Soon</span>
-            <span className="text-white/50 text-xs mt-1">Join the membership</span>
-          </div>
         </div>
 
         {/* Info */}
@@ -64,16 +59,11 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="text-sm text-white/40 line-through">{formatPrice(product.comparePrice)}</span>
               )}
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => { e.preventDefault(); window.location.href = '/membership' }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
+            <Button size="sm" variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <ShoppingCart className="w-3.5 h-3.5" />
+              View
             </Button>
           </div>
-          <p className="text-[10px] text-brand-300/60 mt-1">Members get early access + discounts</p>
         </div>
       </div>
     </Link>

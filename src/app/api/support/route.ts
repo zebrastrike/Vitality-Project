@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { sendEmail } from '@/lib/email'
 import { supportTicketCreated } from '@/lib/email-templates'
 import { createAdminNotification } from '@/lib/notifications'
+import { checkRateLimit, tooManyRequests } from '@/lib/rate-limit'
 
 const schema = z.object({
   subject: z.string().min(2).max(200),
@@ -38,6 +39,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // 10 tickets per IP per 5 minutes — looser for logged-in users below.
+  const rl = checkRateLimit(req, 'support', { limit: 10, windowMs: 5 * 60_000 })
+  if (!rl.allowed) return tooManyRequests(rl.retryAfter)
+
   try {
     const session = await getServerSession(authOptions)
     const data = schema.parse(await req.json())
@@ -72,6 +77,38 @@ export async function POST(req: NextRequest) {
       },
       include: { messages: true },
     })
+
+    // Mirror guest tickets into the CRM as a SalesLead so marketing-intent
+    // inquiries (someone asking pre-sales questions via the contact form)
+    // land in /admin/leads alongside the B2B applications. Logged-in
+    // ticket creators are existing customers — already in /admin/customers,
+    // no lead needed.
+    if (!session?.user?.id) {
+      void (async () => {
+        try {
+          const existingLead = await prisma.salesLead.findFirst({
+            where: { contactEmail: email, organizationId: null },
+            select: { id: true },
+          })
+          if (!existingLead) {
+            await prisma.salesLead.create({
+              data: {
+                businessName: data.name?.trim() || email.split('@')[0],
+                contactName: name,
+                contactEmail: email,
+                source: 'website-contact-form',
+                stage: 'NEW',
+                priority: data.priority === 'URGENT' || data.priority === 'HIGH' ? 'HIGH' : 'NORMAL',
+                notes: `From contact form. Subject: ${data.subject}\n\n${data.message.slice(0, 2000)}`,
+              },
+            })
+          }
+        } catch (err) {
+          // Non-fatal — ticket creation already succeeded.
+          console.error('SalesLead mirror from support ticket failed:', err)
+        }
+      })()
+    }
 
     // Fire-and-forget emails + notifications
     void (async () => {
