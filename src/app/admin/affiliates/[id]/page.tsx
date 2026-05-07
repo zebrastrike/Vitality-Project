@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ExternalLink, MousePointer, DollarSign, Tag } from 'lucide-react'
 import { LinkGenerator } from './link-generator'
+import { AffiliateStatusActions } from './status-actions'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
 
@@ -61,6 +62,14 @@ export default async function AffiliateDetailPage({
               {aff.code}
             </code>
           </div>
+        </div>
+
+        <div className="mt-5 pt-5 border-t border-white/10">
+          <AffiliateStatusActions
+            id={aff.id}
+            status={aff.status}
+            commissionRate={aff.commissionRate}
+          />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">

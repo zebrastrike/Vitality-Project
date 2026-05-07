@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
   Settings, Tag, Truck, Link2, LogOut, Building2, Sparkles, Factory,
   MessageSquare, Star, FileSearch, Filter, Send, CheckSquare, Tags as TagsIcon,
-  UserSquare, TrendingUp,
+  UserSquare, TrendingUp, FileText,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { NotificationBell } from '@/components/admin/notification-bell'
@@ -15,6 +15,7 @@ import { NotificationBell } from '@/components/admin/notification-bell'
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/coa', label: 'Certificates (CoA)', icon: FileText },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { href: '/admin/fulfillments', label: 'Fulfillments', icon: Truck },
   { href: '/admin/facilities', label: 'Facilities', icon: Factory },
