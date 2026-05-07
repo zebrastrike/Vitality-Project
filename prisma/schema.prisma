@@ -1322,3 +1322,31 @@ enum MembershipTier {
   PLUS     // $150/mo
   PREMIUM  // $300/mo
 }
+
+// ─── Certificates of Analysis ────────────────────────────────────────────────
+// Lab CoAs uploaded by admin. Searchable by peptide name, indexed by lot.
+// History per peptide is preserved — every upload is a new row.
+
+model CertificateOfAnalysis {
+  id             String    @id @default(cuid())
+  productSlug    String?   // optional link to a Product
+  productName    String    // free-text — searchable (e.g. "BPC-157", "Retatrutide 5mg")
+  variant        String?   // e.g. "5mg", "lyophilized" — optional detail
+  lotNumber      String
+  documentUrl    String    // path to uploaded PDF or external URL
+  fileName       String?
+  testDate       DateTime?
+  expiryDate     DateTime?
+  purity         String?   // e.g. "99.2%"
+  testingLab     String?   // e.g. "Janoshik Analytical"
+  notes          String?   @db.Text
+  uploadedById   String?
+  uploadedByName String?
+  createdAt      DateTime  @default(now())
+
+  @@map("certificates_of_analysis")
+  @@index([productName])
+  @@index([productSlug])
+  @@index([lotNumber])
+  @@index([createdAt])
+}

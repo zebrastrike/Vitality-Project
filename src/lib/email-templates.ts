@@ -1612,3 +1612,71 @@ export function membershipInvoice(args: {
   `
   return `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">${body}</div></body></html>`
 }
+
+// ─── Affiliate apply: confirmation to applicant ──────────────────────────────
+export function affiliateApplicationReceived(args: { name: string; code: string }) {
+  const { name, code } = args
+  const subject = 'Your Vitality Project affiliate application'
+  const text = `Hi ${name},
+
+Thanks for applying to the Vitality Project affiliate program. Your application is in our queue and we'll review it within 1-2 business days.
+
+Your assigned referral code (placeholder until approval): ${code}
+
+Once approved you'll get a confirmation email with your active referral link, dashboard access at /account/affiliate, and a starter pack of share assets.
+
+- The Vitality Project`
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;">
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">
+      <h2 style="font:600 20px -apple-system,sans-serif;color:#0f172a;margin:0 0 12px;">Application received</h2>
+      <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">Hi ${name},</p>
+      <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">
+        Thanks for applying to the Vitality Project affiliate program. Your application is in our queue and we'll review it within <strong>1-2 business days</strong>.
+      </p>
+      <div style="background:#f1f5f9;border-radius:10px;padding:14px 16px;margin:16px 0;">
+        <p style="font:11px/1 -apple-system,sans-serif;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;margin:0 0 6px;">Your referral code</p>
+        <code style="font:600 18px ui-monospace,monospace;color:#6270f2;">${code}</code>
+      </div>
+      <p style="font:13px/1.6 -apple-system,sans-serif;color:#64748b;margin:0;">
+        Once approved we'll send a confirmation email with your active referral link, dashboard access, and share assets.
+      </p>
+      <p style="font:13px/1.6 -apple-system,sans-serif;color:#94a3b8;margin:18px 0 0;">- The Vitality Project</p>
+    </div>
+  </body></html>`
+  return { subject, html, text }
+}
+
+// ─── Affiliate apply: alert to admin ─────────────────────────────────────────
+export function newAffiliateApplicationAlert(args: {
+  adminEmail: string
+  applicantName: string
+  applicantEmail: string
+  code: string
+  paypalEmail: string | null
+}) {
+  const { applicantName, applicantEmail, code, paypalEmail } = args
+  const subject = `New affiliate application: ${applicantName}`
+  const text = `New affiliate application:
+
+Name:    ${applicantName}
+Email:   ${applicantEmail}
+Code:    ${code}
+PayPal:  ${paypalEmail ?? '(not provided)'}
+
+Approve or suspend at: ${process.env.NEXT_PUBLIC_APP_URL ?? ''}/admin/affiliates`
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;">
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">
+      <h2 style="font:600 18px -apple-system,sans-serif;color:#0f172a;margin:0 0 12px;">New affiliate application</h2>
+      <table style="width:100%;font:14px -apple-system,sans-serif;color:#334155;">
+        <tr><td style="padding:6px 0;color:#64748b;width:96px;">Name</td><td><strong>${applicantName}</strong></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b;">Email</td><td><a href="mailto:${applicantEmail}" style="color:#6270f2;text-decoration:none;">${applicantEmail}</a></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b;">Code</td><td><code style="font:600 14px ui-monospace,monospace;color:#6270f2;">${code}</code></td></tr>
+        <tr><td style="padding:6px 0;color:#64748b;">PayPal</td><td>${paypalEmail ?? '<span style="color:#94a3b8;">(not provided)</span>'}</td></tr>
+      </table>
+      <p style="font:13px/1.6 -apple-system,sans-serif;color:#64748b;margin:18px 0 0;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? ''}/admin/affiliates" style="color:#6270f2;text-decoration:none;font-weight:600;">Review in admin -></a>
+      </p>
+    </div>
+  </body></html>`
+  return { subject, html, text }
+}
