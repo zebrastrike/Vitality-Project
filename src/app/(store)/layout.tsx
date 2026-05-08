@@ -23,6 +23,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <main className="flex-1 pt-44">{children}</main>
       <Footer />
       <AiChat />
+      <Paywall />
       <Suspense fallback={null}>
         <AnalyticsTracker />
       </Suspense>
