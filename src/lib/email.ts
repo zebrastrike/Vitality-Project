@@ -51,13 +51,26 @@ export async function sendEmail({
       replyTo: REPLY_TO,
       ...(tags && tags.length ? { tags } : {}),
     })
-    return { success: true, id: result.data?.id }
-  } catch (error) {
-    console.error('Email error:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+
+    // Resend has TWO failure modes: throws OR returns { data: null, error: ... }.
+    // Catch the silent-error path (e.g. domain-not-verified) explicitly.
+    if (result.error || !result.data?.id) {
+      const errMsg =
+        result.error?.message ?? 'Resend returned no message id'
+      console.error(
+        `[EMAIL FAIL] to=${to} subject="${subject}" error=${errMsg}`,
+      )
+      return { success: false, error: errMsg }
     }
+
+    console.log(`[EMAIL SENT] to=${to} subject="${subject}" id=${result.data.id}`)
+    return { success: true, id: result.data.id }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error(
+      `[EMAIL THROW] to=${to} subject="${subject}" error=${msg}`,
+    )
+    return { success: false, error: msg }
   }
 }
 
