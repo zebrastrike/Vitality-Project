@@ -46,5 +46,6 @@ jobs:
         if: success()
         run: |
           sleep 15
+          # Use the public Cloudflare-proxied domain, not the SSH IP
           curl --fail --silent --show-error --max-time 30 \
-            "https://${{ secrets.HETZNER_HOST }}/api/health" || exit 1
+            "https://vitalityproject.global/api/health" || exit 1
