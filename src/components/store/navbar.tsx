@@ -35,16 +35,17 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 w-full z-50 glass-elevated border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-32">
+        <div className="flex items-center justify-between h-44">
 
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
             <Image
-              src="/logo-light.png"
+              src="/logo-edited.png"
               alt="The Vitality Project"
-              width={800}
-              height={800}
-              className="h-32 w-auto object-contain"
+              width={900}
+              height={900}
+              className="h-40 w-auto object-contain"
+              style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.15)' }}
               priority
             />
           </Link>
