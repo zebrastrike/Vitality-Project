@@ -23,7 +23,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     <div className="flex flex-col min-h-screen relative z-2">
       <RuoBanner />
       <Navbar />
-      <main className="flex-1 pt-24">{children}</main>
+      <main className="flex-1 pt-32">{children}</main>
       <Footer />
       <AiChat />
       <Suspense fallback={null}>
