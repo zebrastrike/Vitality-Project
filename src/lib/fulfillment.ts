@@ -93,24 +93,26 @@ export async function routeOrderToFacilities(orderId: string): Promise<Fulfillme
     })
     created.push(fulfillment)
 
-    // Fulfillment routing — by default we email the supplier. The NetSuite
-    // API push is opt-in (per-facility apiKey OR env-wide creds present)
-    // so that when we eventually hit the volume threshold for direct API
-    // access we can flip facilities over one at a time without breaking
-    // the email pipeline for the rest.
-    const facilityCreds = parseFacilityCredentials(
-      (await prisma.facility.findUnique({ where: { id: bucket.facilityId }, select: { apiKey: true } }))?.apiKey ?? null,
-    )
-    const useNetSuite = !!(facilityCreds ?? getNetSuiteCredentialsFromEnv())
+    // Manual-fulfillment phase: we still create Fulfillment rows so admin
+    // can track what to ship, but we DO NOT auto-notify a supplier.
+    // Re-enable later by setting FULFILLMENT_AUTO_NOTIFY=true once a real
+    // drop-ship pipeline is in place. NetSuite push remains opt-in via
+    // its own creds.
+    if (process.env.FULFILLMENT_AUTO_NOTIFY === 'true') {
+      const facilityCreds = parseFacilityCredentials(
+        (await prisma.facility.findUnique({ where: { id: bucket.facilityId }, select: { apiKey: true } }))?.apiKey ?? null,
+      )
+      const useNetSuite = !!(facilityCreds ?? getNetSuiteCredentialsFromEnv())
 
-    if (useNetSuite) {
-      void pushFulfillmentToNetSuite(fulfillment.id).catch((err) => {
-        console.error(`NetSuite push failed for fulfillment ${fulfillment.id}:`, err)
-      })
-    } else {
-      void emailFulfillmentRequest(fulfillment.id).catch((err) => {
-        console.error(`Fulfillment email failed for ${fulfillment.id}:`, err)
-      })
+      if (useNetSuite) {
+        void pushFulfillmentToNetSuite(fulfillment.id).catch((err) => {
+          console.error(`NetSuite push failed for fulfillment ${fulfillment.id}:`, err)
+        })
+      } else {
+        void emailFulfillmentRequest(fulfillment.id).catch((err) => {
+          console.error(`Fulfillment email failed for ${fulfillment.id}:`, err)
+        })
+      }
     }
   }
 

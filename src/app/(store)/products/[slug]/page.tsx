@@ -174,6 +174,14 @@ export default async function ProductPage({ params }: Props) {
             </span>
           </div>
 
+          {/* Extended lead-time notice — hand-fulfilled while drop-ship pipeline is being finalized */}
+          {product.slug === 'retatrutide' && (
+            <div className="rounded-lg border border-amber-400/30 bg-amber-400/6 px-4 py-3 text-sm text-amber-200/90">
+              <span className="font-semibold text-amber-200">Extended lead time:</span>{' '}
+              Retatrutide orders are currently fulfilled by hand and ship in <span className="font-semibold">10–14 business days</span> while we finalize a dedicated supply pipeline. Thanks for your patience.
+            </div>
+          )}
+
           {/* Short description */}
           {product.shortDesc && (
             <p className="text-white/60 leading-relaxed">{product.shortDesc}</p>
