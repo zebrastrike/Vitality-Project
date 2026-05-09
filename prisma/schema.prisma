@@ -304,7 +304,7 @@ model Product {
   images        ProductImage[]
   variants      ProductVariant[]
   inventory     Int           @default(0)
-  trackInventory Boolean      @default(true)
+  trackInventory Boolean      @default(false)
   weight        Float?        // in grams
   status        ProductStatus @default(DRAFT)
   featured      Boolean       @default(false)
