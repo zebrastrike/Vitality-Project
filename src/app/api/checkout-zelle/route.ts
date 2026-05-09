@@ -137,8 +137,8 @@ export async function POST(req: NextRequest) {
       return {
         productId: product.id,
         variantId: item.variantId,
-        name: product.name,
-        sku: product.sku ?? undefined,
+        name: product.name + (variant ? ` — ${variant.name}` : ''),
+        sku: variant?.sku ?? product.sku ?? undefined,
         price,
         quantity: item.quantity,
         total: itemTotal,
