@@ -93,6 +93,7 @@ export async function POST(
       paymentStatus: true,
       status: true,
       notes: true,
+      affiliateId: true,
       shippingAddress: { select: { name: true } },
       user: { select: { name: true } },
     },
@@ -123,7 +124,8 @@ export async function POST(
   })
 
   // Membership invoice? Activate the membership instead of routing to a
-  // physical facility (memberships have no fulfillment).
+  // physical facility (memberships have no fulfillment). Membership invoices
+  // intentionally DON'T trigger affiliate commissions.
   if (order.notes?.startsWith(MEMBERSHIP_NOTE_PREFIX)) {
     try {
       await activateMembershipFromOrder(order)
@@ -131,11 +133,44 @@ export async function POST(
       console.error('[mark-paid] membership activation failed:', err)
     }
   } else {
-    // Physical-goods order — route to fulfillment facilities (best-effort).
+    // Physical-goods order — route to fulfillment + credit affiliate (if any).
     try {
       await routeOrderToFacilities(order.id)
     } catch (err) {
       console.error('[mark-paid] fulfillment routing failed:', err)
+    }
+
+    if (order.affiliateId) {
+      try {
+        const aff = await prisma.affiliate.findUnique({
+          where: { id: order.affiliateId },
+          select: { id: true, commissionRate: true },
+        })
+        if (aff) {
+          const amount = Math.round(order.total * aff.commissionRate)
+          // Idempotent: only create one commission per (affiliate, order).
+          const existing = await prisma.affiliateCommission.findFirst({
+            where: { affiliateId: aff.id, orderId: order.id },
+            select: { id: true },
+          })
+          if (!existing) {
+            await prisma.affiliateCommission.create({
+              data: {
+                affiliateId: aff.id,
+                orderId: order.id,
+                amount,
+                status: 'PENDING',
+              },
+            })
+            await prisma.affiliate.update({
+              where: { id: aff.id },
+              data: { totalEarned: { increment: amount } },
+            })
+          }
+        }
+      } catch (err) {
+        console.error('[mark-paid] affiliate commission failed:', err)
+      }
     }
   }
 

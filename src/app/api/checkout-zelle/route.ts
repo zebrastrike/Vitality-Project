@@ -198,6 +198,23 @@ export async function POST(req: NextRequest) {
         })
         .catch(() => null))
 
+    // Pull the affiliate cookie (set by /r/<code>, /ref/<code>, or /api/affiliate/track)
+    // and resolve it to an active Affiliate. Skipped for tenant/B2B traffic where
+    // the location already owns the commission split.
+    const affCode = req.cookies.get('aff_code')?.value
+    let resolvedAffiliateId: string | null = null
+    let resolvedAffiliateCode: string | null = null
+    if (affCode && !locationId) {
+      const aff = await prisma.affiliate.findUnique({
+        where: { code: affCode.toUpperCase() },
+        select: { id: true, code: true, status: true },
+      })
+      if (aff && aff.status === 'ACTIVE') {
+        resolvedAffiliateId = aff.id
+        resolvedAffiliateCode = aff.code
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
@@ -217,6 +234,8 @@ export async function POST(req: NextRequest) {
         clientId,
         salesChannel,
         shippingAddressId: shippingAddress?.id,
+        affiliateId: resolvedAffiliateId,
+        affiliateCode: resolvedAffiliateCode,
         items: { create: orderItems },
       },
     })
