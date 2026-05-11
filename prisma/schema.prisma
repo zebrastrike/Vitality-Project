@@ -1298,9 +1298,13 @@ model Membership {
   id                            String         @id @default(cuid())
   userId                        String         @unique
   tier                          MembershipTier @default(NONE)
-  status                        String         @default("ACTIVE") // ACTIVE / PAUSED / CANCELLED
+  // PENDING_PAYMENT (first invoice unpaid) / ACTIVE / PAUSED / CANCELLED
+  status                        String         @default("ACTIVE")
   monthlyPriceCents             Int            @default(0)
   startedAt                     DateTime       @default(now())
+  // First time an invoice for this membership was actually paid. Distinct
+  // from startedAt (signup) so we can show "signed up X, paid Y".
+  paymentConfirmedAt            DateTime?
   renewsAt                      DateTime?
   cancelledAt                   DateTime?
   // Free peptide credits earned per billing period (Plus = 1, Premium = 3)
@@ -1309,6 +1313,10 @@ model Membership {
   // Stripe-style subscription tracking — Chase will go here when ready
   externalSubscriptionId        String?
   paymentProvider               String?        // 'chase', 'stripe', etc.
+  // Outstanding Zelle invoice Order awaiting admin mark-paid (if any).
+  pendingInvoiceOrderId         String?
+  // Rate-limit reminder emails to PENDING_PAYMENT signups.
+  lastReminderSentAt            DateTime?
   user                          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt                     DateTime       @default(now())
   updatedAt                     DateTime       @updatedAt

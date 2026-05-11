@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Sparkles, Check, Zap, Shield, Package, Star, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import type { Metadata } from 'next'
 
 const plans = [
   {
@@ -67,31 +67,56 @@ const perks = [
   { icon: Star, title: 'Member-Only Products', desc: 'Exclusive formulations and stack configurations only available to active members.' },
 ]
 
+const PLAN_TO_TIER: Record<string, 'CLUB' | 'PLUS' | 'PREMIUM'> = {
+  club: 'CLUB',
+  plus: 'PLUS',
+  premium: 'PREMIUM',
+}
+
 export default function MembershipPage() {
-  const [selectedPlan, setSelectedPlan] = useState('plus')
-  const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  return (
+    <Suspense fallback={<div className="max-w-6xl mx-auto px-4 py-16 text-white/40">Loading…</div>}>
+      <MembershipPageInner />
+    </Suspense>
+  )
+}
+
+function MembershipPageInner() {
+  const router = useRouter()
+  const params = useSearchParams()
+  const { data: session, status } = useSession()
+  const initialTier = (params.get('tier') ?? 'plus').toLowerCase()
+  const [selectedPlan, setSelectedPlan] = useState(
+    initialTier in PLAN_TO_TIER ? initialTier : 'plus',
+  )
+  const [submitted, setSubmitted] = useState<{ orderNumber: string; total: number } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) return
-    setLoading(true)
+  const handleJoin = async () => {
     setError('')
+    if (status === 'loading') return
 
+    // Not signed in — bounce to register, return here after with the tier preserved.
+    if (!session?.user) {
+      const next = encodeURIComponent(`/membership?tier=${selectedPlan}&autostart=1`)
+      router.push(`/auth/register?next=${next}`)
+      return
+    }
+
+    setLoading(true)
     try {
-      const res = await fetch('/api/membership', {
+      const res = await fetch('/api/membership/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name: name || undefined, plan: selectedPlan, source: 'membership-page' }),
+        body: JSON.stringify({ tier: PLAN_TO_TIER[selectedPlan] }),
       })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to sign up')
-      }
-      setSubmitted(true)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not start membership')
+      setSubmitted({
+        orderNumber: data.orderNumber ?? '—',
+        total: data.total ?? 0,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -99,19 +124,32 @@ export default function MembershipPage() {
     }
   }
 
+  // Auto-start subscribe after registration round-trip (?autostart=1)
+  useEffect(() => {
+    if (params.get('autostart') === '1' && session?.user && !submitted && !loading) {
+      handleJoin()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user, params])
+
   if (submitted) {
+    const planLabel = plans.find((p) => p.id === selectedPlan)?.name ?? 'Membership'
+    const amount = `$${(submitted.total / 100).toFixed(2)}`
     return (
       <div className="max-w-2xl mx-auto px-4 py-24 text-center">
         <div className="glass rounded-3xl p-12">
           <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
             <Check className="w-8 h-8 text-emerald-400" />
           </div>
-          <h1 className="text-3xl font-bold mb-3">You're In.</h1>
-          <p className="text-white/60 mb-2 leading-relaxed">
-            We've locked in your <strong className="text-white">{plans.find(p => p.id === selectedPlan)?.name}</strong> membership spot.
+          <h1 className="text-3xl font-bold mb-3">Invoice sent.</h1>
+          <p className="text-white/70 mb-4 leading-relaxed">
+            Your <strong className="text-white">{planLabel}</strong> membership invoice
+            is on its way to your inbox. Send <strong className="text-white">{amount}</strong> via Zelle
+            with memo <strong className="text-white">{submitted.orderNumber}</strong> and we'll activate
+            you the moment funds clear (usually same day).
           </p>
           <p className="text-white/40 text-sm mb-8">
-            You'll be the first to know when the shop goes live. Members get priority access before anyone else.
+            Check your email for the Zelle send-to details. If you don't see it within a few minutes, look in spam.
           </p>
           <Link href="/products">
             <Button variant="secondary">
@@ -197,12 +235,14 @@ export default function MembershipPage() {
         ))}
       </div>
 
-      {/* Signup Form */}
+      {/* Signup CTA */}
       <div className="max-w-lg mx-auto mb-20">
         <div className="glass rounded-3xl p-8">
           <h2 className="text-2xl font-bold text-center mb-2">Join now</h2>
           <p className="text-center text-white/40 text-sm mb-6">
-            Sign in (or create an account in 30 seconds) and choose a plan above. We'll send the Zelle send-to address by email and activate your membership the moment funds clear.
+            {session?.user
+              ? "You're signed in — pick a plan above and tap join. We'll email Zelle instructions and activate you the moment funds clear."
+              : "Choose a plan above, then create an account (30 seconds) and we'll email Zelle instructions to activate your membership."}
           </p>
 
           {error && (
@@ -211,29 +251,13 @@ export default function MembershipPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-            <Input
-              label="Name (optional)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-            />
-            <Button type="submit" size="lg" loading={loading} className="w-full">
-              <Sparkles className="w-5 h-5" />
-              Join as {plans.find(p => p.id === selectedPlan)?.name} Member
-            </Button>
-            <p className="text-xs text-white/25 text-center">
-              Pay via Zelle. We email the send-to address right after you submit; membership activates as soon as funds clear.
-            </p>
-          </form>
+          <Button onClick={handleJoin} size="lg" loading={loading} className="w-full">
+            <Sparkles className="w-5 h-5" />
+            Join as {plans.find(p => p.id === selectedPlan)?.name} Member
+          </Button>
+          <p className="text-xs text-white/25 text-center mt-4">
+            Pay via Zelle. Membership activates as soon as funds clear.
+          </p>
         </div>
       </div>
 

@@ -1,14 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserPlus } from 'lucide-react'
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterInner />
+    </Suspense>
+  )
+}
+
+function RegisterInner() {
   const router = useRouter()
+  const params = useSearchParams()
+  const next = params.get('next')
   const [form, setForm] = useState({ name: '', email: '', username: '', password: '', confirm: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -31,7 +41,10 @@ export default function RegisterPage() {
       }),
     })
     if (res.ok) {
-      router.push('/auth/login?registered=true')
+      const target = next
+        ? `/auth/login?registered=true&next=${encodeURIComponent(next)}`
+        : '/auth/login?registered=true'
+      router.push(target)
     } else {
       const d = await res.json()
       setError(d.error ?? 'Registration failed')

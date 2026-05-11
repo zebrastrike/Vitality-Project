@@ -1,15 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Lock } from 'lucide-react'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  )
+}
+
+function LoginInner() {
   const router = useRouter()
+  const params = useSearchParams()
+  // Only follow internal redirects to avoid open-redirect risk.
+  const rawNext = params.get('next')
+  const next = rawNext && rawNext.startsWith('/') ? rawNext : null
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,7 +42,7 @@ export default function LoginPage() {
       setError('Invalid email/username or password')
       setLoading(false)
     } else {
-      router.push('/')
+      router.push(next ?? '/')
       router.refresh()
     }
   }

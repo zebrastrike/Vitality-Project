@@ -690,7 +690,7 @@ export function Paywall() {
               {slide.id === 'hero' && (
                 <div className="flex flex-col gap-2 max-w-xs mx-auto">
                   <Link
-                    href="/auth/register"
+                    href="/membership"
                     className="bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl px-5 py-2.5 transition-colors flex items-center justify-center gap-2"
                   >
                     <UserPlus className="w-4 h-4" /> Become A Vital Member
@@ -706,7 +706,7 @@ export function Paywall() {
 
               {(slide.id === 'club' || slide.id === 'plus' || slide.id === 'premium') && (
                 <Link
-                  href="/auth/register"
+                  href={`/membership?tier=${slide.id}`}
                   className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-semibold rounded-xl px-5 py-2.5 transition-colors"
                 >
                   <Sparkles className="w-4 h-4" /> Join {slide.headline}

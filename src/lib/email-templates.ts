@@ -1613,6 +1613,59 @@ export function membershipInvoice(args: {
   return `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">${body}</div></body></html>`
 }
 
+// ─── Membership signup reminder ──────────────────────────────────────────────
+// Sent to a user who signed up for a membership but hasn't sent the Zelle
+// payment yet. Hits 48h, 5d, then 10d after signup.
+export function membershipSignupReminder(args: {
+  name: string | null
+  planLabel: string
+  amountCents: number
+  invoiceNumber: string
+  signedUpAt: Date
+  daysWaiting: number
+}) {
+  const { name, planLabel, amountCents, invoiceNumber, signedUpAt, daysWaiting } = args
+  const greeting = name ? `Hi ${name.split(' ')[0]}` : 'Hi'
+  const amount = `$${(amountCents / 100).toFixed(2)}`
+  const zelleEmail = process.env.ZELLE_RECIPIENT_EMAIL ?? 'billing@vitalityproject.global'
+  const zellePhone = process.env.ZELLE_RECIPIENT_PHONE ?? ''
+  const signedUpStr = signedUpAt.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  const subject = `Reminder: activate your ${planLabel} membership (${amount} via Zelle)`
+  const text = `${greeting},
+
+Just a nudge — your ${planLabel} membership signup from ${signedUpStr} is still waiting on payment. Send ${amount} via Zelle to ${zelleEmail}${zellePhone ? ` (or ${zellePhone})` : ''} with memo ${invoiceNumber} and we'll activate the moment funds clear.
+
+It's been ${daysWaiting} day${daysWaiting === 1 ? '' : 's'} since you signed up. If you no longer want the membership, just ignore this — we'll auto-close pending signups after 14 days.
+
+— The Vitality Project`
+
+  const body = `
+    <h1 style="font:600 20px/1.3 -apple-system,sans-serif;color:#0f172a;margin:0 0 12px;">Activate your ${escapeHtml(planLabel)} membership</h1>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">${escapeHtml(greeting)},</p>
+    <p style="font:14px/1.6 -apple-system,sans-serif;color:#334155;margin:0 0 14px;">
+      Quick nudge — your <strong>${escapeHtml(planLabel)}</strong> signup from <strong>${escapeHtml(signedUpStr)}</strong>
+      is still waiting on payment. Send <strong>${amount}</strong> via Zelle and we'll activate it the moment funds clear.
+    </p>
+    <div style="background:#f1f5f9;border-radius:10px;padding:16px;margin:0 0 14px;">
+      <p style="font:12px/1.4 -apple-system,sans-serif;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Zelle to</p>
+      <p style="font:600 15px/1.4 -apple-system,sans-serif;color:#0f172a;margin:0 0 4px;">${escapeHtml(zelleEmail)}</p>
+      ${zellePhone ? `<p style="font:14px/1.4 -apple-system,sans-serif;color:#475569;margin:0 0 8px;">or ${escapeHtml(zellePhone)}</p>` : ''}
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;"><strong>Memo / note:</strong> ${escapeHtml(invoiceNumber)}</p>
+      <p style="font:13px/1.4 -apple-system,sans-serif;color:#334155;margin:6px 0 0;"><strong>Amount:</strong> ${amount}</p>
+    </div>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#64748b;margin:0 0 8px;">
+      It's been <strong>${daysWaiting} day${daysWaiting === 1 ? '' : 's'}</strong> since you signed up. If you no longer want the membership, just ignore this — pending signups auto-close after 14 days.
+    </p>
+    <p style="font:13px/1.6 -apple-system,sans-serif;color:#94a3b8;margin:18px 0 0;">— The Vitality Project</p>
+  `
+  const html = `<!doctype html><html><body style="margin:0;padding:24px;background:#f8fafc;"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:28px 32px;border-radius:14px;border:1px solid #e2e8f0;">${body}</div></body></html>`
+  return { subject, html, text }
+}
+
 // ─── Affiliate apply: confirmation to applicant ──────────────────────────────
 export function affiliateApplicationReceived(args: { name: string; code: string }) {
   const { name, code } = args
