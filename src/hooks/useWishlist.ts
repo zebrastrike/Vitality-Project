@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
@@ -17,6 +18,7 @@ interface WishlistState {
   clear: () => void
   has: (productId: string) => boolean
   count: number
+  mergeFromServer: (serverItems: WishlistItem[]) => void
 }
 
 /**
@@ -34,6 +36,14 @@ export const useWishlist = create<WishlistState>()(
         set((state) => ({ items: [...state.items, item] }))
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('wishlist:change'))
+          // Best-effort server-side persist for logged-in users. 401s are
+          // silently ignored so anonymous sessions keep working off localStorage.
+          void fetch('/api/wishlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId: item.id }),
+            keepalive: true,
+          }).catch(() => {})
         }
       },
       remove: (productId) => {
@@ -42,6 +52,10 @@ export const useWishlist = create<WishlistState>()(
         }))
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('wishlist:change'))
+          void fetch(`/api/wishlist?productId=${encodeURIComponent(productId)}`, {
+            method: 'DELETE',
+            keepalive: true,
+          }).catch(() => {})
         }
       },
       toggle: (item) => {
@@ -58,6 +72,16 @@ export const useWishlist = create<WishlistState>()(
       has: (productId) => get().items.some((i) => i.id === productId),
       get count() {
         return get().items.length
+      },
+      mergeFromServer: (serverItems: WishlistItem[]) => {
+        const existing = get().items
+        const seen = new Set(existing.map((i) => i.id))
+        const additions = serverItems.filter((i) => !seen.has(i.id))
+        if (additions.length === 0) return
+        set({ items: [...existing, ...additions] })
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('wishlist:change'))
+        }
       },
     }),
     {
@@ -110,3 +134,53 @@ export const useWishlist = create<WishlistState>()(
     },
   ),
 )
+
+/**
+ * Two-way sync between localStorage wishlist and the server-side WishlistItem
+ * table. Mount once at the top of the authenticated layout. On first run after
+ * a sign-in:
+ *   1. PUT any local items the server doesn't know about (preserves local
+ *      adds made while logged out).
+ *   2. GET the user's server-side wishlist and merge anything new into local
+ *      (preserves additions made from another device).
+ * Subsequent add/remove calls hit the API inline via the hook actions.
+ */
+export function useWishlistSync(isAuthenticated: boolean) {
+  const ran = useRef(false)
+  useEffect(() => {
+    if (!isAuthenticated || ran.current) return
+    ran.current = true
+    const localItems = useWishlist.getState().items
+    const merge = useWishlist.getState().mergeFromServer
+    void (async () => {
+      try {
+        if (localItems.length > 0) {
+          await fetch('/api/wishlist', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productIds: localItems.map((i) => i.id) }),
+          })
+        }
+        const res = await fetch('/api/wishlist', { method: 'GET' })
+        if (!res.ok) return
+        const data = (await res.json()) as {
+          items: Array<{
+            productId: string
+            product: { id: string; name: string; slug: string; price: number; images: Array<{ url: string }> }
+          }>
+        }
+        merge(
+          data.items.map((it) => ({
+            id: it.productId,
+            name: it.product.name,
+            slug: it.product.slug,
+            price: it.product.price,
+            image: it.product.images?.[0]?.url,
+          })),
+        )
+      } catch {
+        // Best-effort. If sync fails the local wishlist still works.
+      }
+    })()
+  }, [isAuthenticated])
+}

@@ -1,8 +1,15 @@
 // ──────────────────────────────────────────────────────────────────────────
 // The Vitality Project — Sales Tax Calculator
-// Static per-state US rates. Not a substitute for Avalara/TaxJar but accurate
-// enough for a research-compound business operating from Florida.
+//
+// Static per-state US rates are the fallback. Admin can override any state
+// rate from /admin/settings (siteSetting keys "taxRate.<STATE>" hold floats).
+// B2B/tenant traffic can disable tax entirely via siteSetting "taxB2BExempt"
+// — set "true" to short-circuit calculation when an organizationId is on the
+// order. Not a substitute for Avalara/TaxJar but accurate enough for a
+// research-compound business operating from Florida.
 // ──────────────────────────────────────────────────────────────────────────
+
+import { prisma } from './prisma'
 
 export const STATE_TAX_RATES: Record<string, number> = {
   AL: 0.04,
@@ -61,6 +68,9 @@ export const STATE_TAX_RATES: Record<string, number> = {
 /**
  * Returns sales tax in cents for a given subtotal (also in cents).
  * Unknown / international states return 0.
+ *
+ * Synchronous variant — used by checkout when no admin override is needed.
+ * Use `calculateTaxAsync` when you want admin overrides + B2B exemption.
  */
 export function calculateTax(subtotal: number, state: string): number {
   if (!state) return 0
@@ -74,4 +84,42 @@ export function calculateTax(subtotal: number, state: string): number {
 export function getTaxRate(state: string): number {
   if (!state) return 0
   return STATE_TAX_RATES[state.toUpperCase()] ?? 0
+}
+
+/**
+ * Async tax calculation honoring admin overrides + B2B exemption.
+ *
+ *   1. If organizationId set + siteSetting `taxB2BExempt = "true"` → 0
+ *   2. siteSetting `taxRate.<STATE>` (parsed as float) overrides STATE_TAX_RATES
+ *   3. Falls back to STATE_TAX_RATES
+ *
+ * Cache the SiteSetting lookups per request via the parameter passthrough
+ * pattern; checkout calls this once and the helper does <= 2 queries.
+ */
+export async function calculateTaxAsync(
+  subtotal: number,
+  state: string,
+  opts: { organizationId?: string | null } = {},
+): Promise<number> {
+  if (!state) return 0
+  const stateUpper = state.toUpperCase()
+
+  if (opts.organizationId) {
+    const exempt = await prisma.siteSetting.findUnique({
+      where: { key: 'taxB2BExempt' },
+      select: { value: true },
+    })
+    if (exempt?.value === 'true') return 0
+  }
+
+  const override = await prisma.siteSetting.findUnique({
+    where: { key: `taxRate.${stateUpper}` },
+    select: { value: true },
+  })
+  const overrideRate = override?.value ? parseFloat(override.value) : NaN
+  const rate = Number.isFinite(overrideRate)
+    ? overrideRate
+    : (STATE_TAX_RATES[stateUpper] ?? 0)
+
+  return Math.round(subtotal * rate)
 }

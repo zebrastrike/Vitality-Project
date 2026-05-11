@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import { membershipActivated, zellePaymentConfirmed } from '@/lib/email-templates'
 import { routeOrderToFacilities } from '@/lib/fulfillment'
+import { awardPointsForOrder } from '@/lib/loyalty'
 
 const MEMBERSHIP_NOTE_PREFIX = 'MEMBERSHIP:'
 const TIER_LABELS: Record<string, string> = {
@@ -96,6 +97,7 @@ export async function POST(
       paymentStatus: true,
       status: true,
       notes: true,
+      userId: true,
       affiliateId: true,
       items: { select: { name: true, sku: true, quantity: true, price: true, total: true } },
       shippingAddress: {
@@ -152,6 +154,22 @@ export async function POST(
       await routeOrderToFacilities(order.id)
     } catch (err) {
       console.error('[mark-paid] fulfillment routing failed:', err)
+    }
+
+    // Loyalty points — award after payment confirmation (not at placement)
+    // so partial-pay or cancelled orders never earn points. Memberships
+    // intentionally don't earn loyalty either (handled by the early return
+    // above).
+    if (order.userId) {
+      try {
+        await awardPointsForOrder({
+          userId: order.userId,
+          orderId: order.id,
+          orderTotal: order.total,
+        })
+      } catch (err) {
+        console.error('[mark-paid] loyalty award failed:', err)
+      }
     }
 
     if (order.affiliateId) {

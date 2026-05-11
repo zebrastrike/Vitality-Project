@@ -10,7 +10,7 @@ import {
   zelleOrderAdminAlert,
 } from '@/lib/email-templates'
 import { calculateShipping } from '@/lib/shipping'
-import { calculateTax } from '@/lib/tax'
+import { calculateTaxAsync } from '@/lib/tax'
 import { z } from 'zod'
 
 // Customer-driven Zelle checkout. Creates an order in PENDING / UNPAID state
@@ -170,7 +170,11 @@ export async function POST(req: NextRequest) {
       data.shippingAddress.state,
     )
     const taxableBase = Math.max(0, subtotal - discount)
-    const taxAmount = calculateTax(taxableBase, data.shippingAddress.state)
+    const taxAmount = await calculateTaxAsync(
+      taxableBase,
+      data.shippingAddress.state,
+      { organizationId },
+    )
     const total = Math.max(0, subtotal - discount + shippingCost + taxAmount)
 
     const orderNumber = generateOrderNumber()

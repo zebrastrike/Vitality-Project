@@ -16,6 +16,9 @@ type Settings = {
   freeShippingThreshold: string
   maintenanceMode: string
 
+  // Fulfillment
+  fulfillmentAutoNotify: string
+
   // Zelle
   zelleEmail: string
   zelleDisplayName: string
@@ -42,6 +45,7 @@ const DEFAULTS: Settings = {
   defaultCommissionRate: '10',
   freeShippingThreshold: '',
   maintenanceMode: '',
+  fulfillmentAutoNotify: '',
   zelleEmail: '',
   zelleDisplayName: 'The Vitality Project',
   zellePhone: '',
@@ -346,6 +350,41 @@ export default function AdminSettingsPage() {
               <p className="text-sm font-medium">Maintenance mode</p>
               <p className="text-xs text-white/40">
                 Shows a maintenance page to all non-admin visitors
+              </p>
+            </div>
+          </label>
+        </Section>
+
+        {/* Fulfillment */}
+        <Section
+          title="Fulfillment"
+          subtitle="Drop-ship pipeline routing"
+          onSave={() => saveSection('fulfillment', ['fulfillmentAutoNotify'])}
+          saving={saving}
+          savedNow={savedKey === 'fulfillment'}
+        >
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.fulfillmentAutoNotify === 'true'}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  fulfillmentAutoNotify: e.target.checked ? 'true' : '',
+                })
+              }
+              className="w-4 h-4 mt-0.5 rounded accent-brand-500"
+            />
+            <div>
+              <p className="text-sm font-medium">Auto-notify supplier on payment</p>
+              <p className="text-xs text-white/40 mt-1 leading-relaxed">
+                When ON, marking an order paid emails the configured supplier
+                (FULFILLMENT_EMAIL) — or pushes to NetSuite if creds are set —
+                with full order details for drop-shipping.
+                <br />
+                When OFF (current manual-fulfillment phase), Fulfillment rows
+                still get created but the supplier is not notified — admin
+                ships manually and receives a "ready to ship" email instead.
               </p>
             </div>
           </label>

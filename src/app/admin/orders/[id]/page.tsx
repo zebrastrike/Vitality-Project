@@ -17,6 +17,75 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
   if (!order) notFound()
 
+  // Pull the event timeline: AuditLog rows for this order + lifecycle stamps
+  // pulled straight off the Order itself.
+  const auditEntries = await prisma.auditLog.findMany({
+    where: { entityType: 'Order', entityId: order.id },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
+  const fulfillments = await prisma.fulfillment.findMany({
+    where: { orderId: order.id },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      status: true,
+      trackingNumber: true,
+      carrier: true,
+      shippedAt: true,
+      createdAt: true,
+    },
+  })
+
+  type Event = {
+    at: Date
+    kind: 'placed' | 'paid' | 'shipped' | 'delivered' | 'fulfillment' | 'audit'
+    title: string
+    detail?: string
+    by?: string
+  }
+  const events: Event[] = []
+  events.push({ at: order.createdAt, kind: 'placed', title: 'Order placed' })
+  if (order.paymentStatus === 'PAID') {
+    events.push({
+      at: order.updatedAt,
+      kind: 'paid',
+      title: 'Payment confirmed',
+      detail: order.paymentMethod?.toUpperCase() ?? undefined,
+    })
+  }
+  for (const f of fulfillments) {
+    events.push({
+      at: f.createdAt,
+      kind: 'fulfillment',
+      title: `Fulfillment ${f.status}`,
+      detail:
+        f.trackingNumber
+          ? `${f.carrier ?? 'Carrier'} · ${f.trackingNumber}`
+          : undefined,
+    })
+    if (f.shippedAt) {
+      events.push({
+        at: f.shippedAt,
+        kind: 'shipped',
+        title: 'Shipped',
+        detail: f.trackingNumber
+          ? `${f.carrier ?? 'Carrier'} · ${f.trackingNumber}`
+          : undefined,
+      })
+    }
+  }
+  for (const a of auditEntries) {
+    events.push({
+      at: a.createdAt,
+      kind: 'audit',
+      title: a.action,
+      detail: a.metadata ?? undefined,
+      by: a.userEmail ?? undefined,
+    })
+  }
+  events.sort((a, b) => b.at.getTime() - a.at.getTime())
+
   return (
     <div>
       <div className="flex items-center gap-4 mb-8">
@@ -61,6 +130,50 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
           {/* Admin Actions — client component */}
           <OrderActions order={{ id: order.id, status: order.status, paymentStatus: order.paymentStatus, total: order.total, trackingNumber: order.trackingNumber, trackingUrl: order.trackingUrl, notes: order.notes }} />
+
+          {/* Timeline */}
+          <div className="glass rounded-2xl p-6">
+            <h2 className="font-semibold mb-4">Timeline</h2>
+            {events.length === 0 ? (
+              <p className="text-sm text-white/40">No events recorded.</p>
+            ) : (
+              <ol className="space-y-3">
+                {events.map((e, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <div
+                      className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                        e.kind === 'paid'
+                          ? 'bg-emerald-400'
+                          : e.kind === 'shipped' || e.kind === 'delivered'
+                            ? 'bg-brand-400'
+                            : e.kind === 'placed'
+                              ? 'bg-amber-400'
+                              : e.kind === 'fulfillment'
+                                ? 'bg-blue-400'
+                                : 'bg-white/30'
+                      }`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="text-sm font-medium">{e.title}</p>
+                        <p className="text-xs text-white/30 shrink-0">
+                          {formatDate(e.at)}
+                        </p>
+                      </div>
+                      {e.detail && (
+                        <p className="text-xs text-white/50 mt-0.5 wrap-break-word">
+                          {e.detail}
+                        </p>
+                      )}
+                      {e.by && (
+                        <p className="text-xs text-white/30 mt-0.5">by {e.by}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
 
         {/* Right: customer + shipping */}

@@ -40,6 +40,7 @@ model User {
   supportTickets SupportTicket[]
   membership    Membership?
   refundsCreated Refund[]    @relation("RefundCreatedBy")
+  wishlistItems WishlistItem[]
 
   verifyToken      String?   @unique
   resetToken       String?   @unique
@@ -316,6 +317,7 @@ model Product {
   reviews       Review[]
   priceOverrides ProductPriceOverride[]
   facilities    ProductFacility[]
+  wishlistedBy  WishlistItem[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -1020,6 +1022,23 @@ enum NotificationType {
   FULFILLMENT_DELAYED
   SUPPORT_TICKET_NEW
   SYSTEM
+}
+
+// ─── Wishlist (server-persisted) ─────────────────────────────────────────────
+// Logged-in users get a server-side wishlist that survives device changes.
+// Anonymous browsers keep using the localStorage hook — the sync happens
+// once they sign in via /api/wishlist.
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("wishlist_items")
 }
 
 // ─── Cron Runs ───────────────────────────────────────────────────────────────

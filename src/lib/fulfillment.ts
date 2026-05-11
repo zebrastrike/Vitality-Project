@@ -95,10 +95,17 @@ export async function routeOrderToFacilities(orderId: string): Promise<Fulfillme
 
     // Manual-fulfillment phase: we still create Fulfillment rows so admin
     // can track what to ship, but we DO NOT auto-notify a supplier.
-    // Re-enable later by setting FULFILLMENT_AUTO_NOTIFY=true once a real
-    // drop-ship pipeline is in place. NetSuite push remains opt-in via
-    // its own creds.
-    if (process.env.FULFILLMENT_AUTO_NOTIFY === 'true') {
+    // Re-enable from /admin/settings (siteSetting key=fulfillmentAutoNotify)
+    // OR via FULFILLMENT_AUTO_NOTIFY=true env var. Either flips the gate.
+    // NetSuite push remains opt-in via its own creds.
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: 'fulfillmentAutoNotify' },
+      select: { value: true },
+    })
+    const autoNotifyEnabled =
+      process.env.FULFILLMENT_AUTO_NOTIFY === 'true' ||
+      setting?.value === 'true'
+    if (autoNotifyEnabled) {
       const facilityCreds = parseFacilityCredentials(
         (await prisma.facility.findUnique({ where: { id: bucket.facilityId }, select: { apiKey: true } }))?.apiKey ?? null,
       )
