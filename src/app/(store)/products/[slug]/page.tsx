@@ -174,11 +174,18 @@ export default async function ProductPage({ params }: Props) {
             </span>
           </div>
 
-          {/* Extended lead-time notice — hand-fulfilled while drop-ship pipeline is being finalized */}
+          {/* Backorder notice — Reta supply is short, pre-orders only. */}
           {product.slug === 'retatrutide' && (
-            <div className="rounded-lg border border-amber-400/30 bg-amber-400/6 px-4 py-3 text-sm text-amber-200/90">
-              <span className="font-semibold text-amber-200">Extended lead time:</span>{' '}
-              Retatrutide orders are currently fulfilled by hand and ship in <span className="font-semibold">10–14 business days</span> while we finalize a dedicated supply pipeline. Thanks for your patience.
+            <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-200/90">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-400/25 text-amber-200 border border-amber-400/40">
+                  Pre-order
+                </span>
+                <span className="font-semibold text-amber-200">Backorder — ships in 3–4 weeks</span>
+              </div>
+              <p className="text-amber-200/80 leading-relaxed">
+                Retatrutide is on a short backorder. We're accepting pre-orders now and will email you the moment yours ships. Thanks for your patience.
+              </p>
             </div>
           )}
 

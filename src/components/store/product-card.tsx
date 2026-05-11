@@ -41,6 +41,12 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
 
+          {product.slug === 'retatrutide' && (
+            <div className="absolute top-3 right-3 bg-amber-400/95 text-amber-950 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg shadow-sm">
+              Pre-order
+            </div>
+          )}
+
         </div>
 
         {/* Info */}
