@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { paymentReminder } from "@/lib/email-templates";
+import { trackCronRun } from "@/lib/cron-tracker";
 
 const REMINDER_AFTER_DAYS = 3;
 const STOP_REMINDING_AFTER_DAYS = 14;
@@ -29,7 +30,14 @@ function authorize(req: NextRequest): boolean {
 
 export async function GET(req: NextRequest) {
   if (!authorize(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  return trackCronRun(
+    "Payment reminders",
+    () => doRun(),
+    (r) => `scanned=${r.scanned} sent=${r.sent} alreadySent=${r.alreadySent} failed=${r.failed}`,
+  );
+}
 
+async function doRun() {
   const now = Date.now();
   const reminderCutoff = new Date(now - REMINDER_AFTER_DAYS * 86400e3);
   const stopCutoff     = new Date(now - STOP_REMINDING_AFTER_DAYS * 86400e3);
@@ -106,11 +114,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
+  return {
     scanned: orders.length,
     sent,
     alreadySent,
     failed,
     results,
-  });
+  };
 }

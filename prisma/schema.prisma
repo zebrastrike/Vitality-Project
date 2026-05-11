@@ -1022,6 +1022,25 @@ enum NotificationType {
   SYSTEM
 }
 
+// ─── Cron Runs ───────────────────────────────────────────────────────────────
+// Every cron endpoint records a row here when it starts + when it finishes
+// (or throws). Drives /admin/cron-status so admin can spot stalls without
+// SSHing into the box.
+model CronRun {
+  id         String   @id @default(cuid())
+  job        String
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+  durationMs Int?
+  status     String   // OK | FAILED | RUNNING
+  result     String?  // free-form summary or error message
+  createdAt  DateTime @default(now())
+
+  @@map("cron_runs")
+  @@index([job, startedAt])
+  @@index([startedAt])
+}
+
 // ─── Page Views / Analytics ─────────────────────────────────────────────────
 
 model PageView {

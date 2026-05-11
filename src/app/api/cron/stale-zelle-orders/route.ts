@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
+import { trackCronRun } from '@/lib/cron-tracker'
 
 // Cron — finds Zelle orders that have been sitting PENDING+UNPAID for >7 days
 // and sends a single admin nudge email. Prevents orders from quietly aging in
@@ -28,7 +29,14 @@ export async function GET(req: NextRequest) {
   if (!authorize(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+  return trackCronRun(
+    'Stale Zelle nudge',
+    () => doRun(),
+    (r) => `examined=${r.examined} nudged=${r.nudged} skipped=${r.skipped} failed=${r.failed}`,
+  )
+}
 
+async function doRun() {
   const cutoff = new Date(Date.now() - STALE_THRESHOLD_DAYS * 86400e3)
 
   const stale = await prisma.order.findMany({
@@ -130,13 +138,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    ok: true,
+  return {
+    ok: true as const,
     examined: stale.length,
     nudged,
     skipped,
     failed,
     thresholdDays: STALE_THRESHOLD_DAYS,
     results,
-  })
+  }
 }

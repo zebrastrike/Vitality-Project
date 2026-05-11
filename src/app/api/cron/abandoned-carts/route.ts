@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import { abandonedCart } from '@/lib/email-templates'
+import { trackCronRun } from '@/lib/cron-tracker'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'
 const CRON_SECRET = process.env.CRON_SECRET
@@ -159,14 +160,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  try {
-    const result = await runJob()
-    return NextResponse.json({ ok: true, ...result })
-  } catch (err) {
-    console.error('[abandoned-carts] job threw:', err)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'job failed' },
-      { status: 500 },
-    )
-  }
+  return trackCronRun(
+    'Abandoned carts',
+    async () => {
+      const result = await runJob()
+      return { ok: true, ...result }
+    },
+    (r) => `scanned=${r.scanned} sent=${r.sent} skipped=${r.skipped} errors=${r.errors}`,
+  )
 }

@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email'
 import { membershipInvoice } from '@/lib/email-templates'
 import { TIER_BENEFITS } from '@/lib/membership'
 import { generateOrderNumber } from '@/lib/utils'
+import { trackCronRun } from '@/lib/cron-tracker'
 
 // Cron — generates the next monthly invoice for any ACTIVE membership whose
 // renewsAt window is within 3 days. Creates a Zelle invoice Order tagged
@@ -39,7 +40,15 @@ export async function GET(req: NextRequest) {
   if (!authorize(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+  return trackCronRun(
+    'Membership monthly renewals',
+    () => doRun(),
+    (r) =>
+      `examined=${r.examined} invoiced=${r.invoiced} skipped=${r.skipped} failed=${r.failed}`,
+  )
+}
 
+async function doRun() {
   const dueWindow = new Date(Date.now() + 3 * 86400e3) // within 3 days
   const memberships = await prisma.membership.findMany({
     where: {
@@ -56,14 +65,15 @@ export async function GET(req: NextRequest) {
     include: { variants: true },
   })
   if (!product) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: 'Membership product not seeded — first subscribe creates it',
-        examined: memberships.length,
-      },
-      { status: 200 },
-    )
+    return {
+      ok: false as const,
+      error: 'Membership product not seeded — first subscribe creates it',
+      examined: memberships.length,
+      invoiced: 0,
+      skipped: 0,
+      failed: 0,
+      results: [] as unknown[],
+    }
   }
 
   let invoiced = 0
@@ -198,12 +208,12 @@ Amount: ${amountStr}
     }
   }
 
-  return NextResponse.json({
-    ok: true,
+  return {
+    ok: true as const,
     examined: memberships.length,
     invoiced,
     skipped,
     failed,
     results,
-  })
+  }
 }

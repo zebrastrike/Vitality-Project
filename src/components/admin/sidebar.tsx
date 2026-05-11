@@ -7,13 +7,14 @@ import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
   Settings, Tag, Truck, Link2, LogOut, Building2, Sparkles, Factory,
   MessageSquare, Star, FileSearch, Filter, Send, CheckSquare, Tags as TagsIcon,
-  UserSquare, TrendingUp, FileText,
+  UserSquare, TrendingUp, FileText, Bell, Activity,
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { NotificationBell } from '@/components/admin/notification-bell'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/coa', label: 'Certificates (CoA)', icon: FileText },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
@@ -31,9 +32,11 @@ const navItems = [
   { href: '/admin/affiliates', label: 'Affiliates', icon: Link2 },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
   { href: '/admin/discounts', label: 'Discounts', icon: Tag },
+  { href: '/admin/shipping', label: 'Shipping', icon: Truck },
   { href: '/admin/support', label: 'Support', icon: MessageSquare },
   { href: '/admin/reviews', label: 'Reviews', icon: Star },
   { href: '/admin/audit', label: 'Audit Log', icon: FileSearch },
+  { href: '/admin/cron-status', label: 'Cron Status', icon: Activity },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 

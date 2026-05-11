@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import { membershipSignupReminder } from '@/lib/email-templates'
 import { TIER_BENEFITS } from '@/lib/membership'
+import { trackCronRun } from '@/lib/cron-tracker'
 
 // Cron — nudges users who signed up for a membership but haven't sent the
 // Zelle payment yet. Sends at 2d, 5d, 10d after signup. Skips members whose
@@ -35,7 +36,15 @@ export async function GET(req: NextRequest) {
   if (!authorize(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+  return trackCronRun(
+    'Membership reminders',
+    () => doRun(),
+    (r) =>
+      `examined=${r.examined} sent=${r.sent} skipped=${r.skipped} failed=${r.failed}`,
+  )
+}
 
+async function doRun() {
   const now = Date.now()
   const twoDaysAgo = new Date(now - 2 * 86400e3)
   const oneDayAgo = new Date(now - 1 * 86400e3)
@@ -168,12 +177,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({
-    ok: true,
+  return {
+    ok: true as const,
     examined: pending.length,
     sent,
     skipped,
     failed,
     results,
-  })
+  }
 }
