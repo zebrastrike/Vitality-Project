@@ -37,6 +37,24 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Loyalty points redemption state — fetched once on auth, applied at submit.
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number>(0)
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0)
+  useEffect(() => {
+    if (!session?.user?.id) return
+    let cancelled = false
+    fetch('/api/account/loyalty')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return
+        setLoyaltyBalance(data.points ?? 0)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [session?.user?.id])
+
   useEffect(() => {
     if (session?.user?.name && !name) setName(session.user.name)
   }, [session?.user?.name, name])
@@ -162,6 +180,7 @@ export default function CheckoutPage() {
             country: 'US',
           },
           discountCode: discountCode || undefined,
+          loyaltyPointsToRedeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
         }),
       })
 
@@ -253,6 +272,87 @@ export default function CheckoutPage() {
               placeholder="OPTIONAL"
             />
           </div>
+
+          {/* Loyalty points redemption — only visible if customer has any. */}
+          {loyaltyBalance > 0 && (
+            <div className="glass rounded-2xl p-6 space-y-3">
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-lg font-semibold">Loyalty points</h2>
+                <span className="text-sm text-white/50">
+                  Balance: <span className="text-white">{loyaltyBalance.toLocaleString()} pts</span>{' '}
+                  <span className="text-white/30">(${(loyaltyBalance / 100).toFixed(2)})</span>
+                </span>
+              </div>
+              {(() => {
+                // Cap redemption to whichever is smaller: balance, or the
+                // amount that would zero out the cart subtotal (don't let
+                // shipping/tax go negative).
+                const remainingForRedemption = Math.max(
+                  0,
+                  (discount?.finalTotalCents ?? subtotal) - 0, // points can't reduce shipping/tax below 0; server clamps
+                )
+                const maxPoints = Math.min(loyaltyBalance, remainingForRedemption)
+                const clamped = Math.max(0, Math.min(pointsToRedeem, maxPoints))
+                return (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min={0}
+                        max={maxPoints}
+                        step={Math.max(1, Math.floor(maxPoints / 100))}
+                        value={clamped}
+                        onChange={(e) => setPointsToRedeem(parseInt(e.target.value) || 0)}
+                        className="flex-1 accent-brand"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        max={maxPoints}
+                        value={clamped}
+                        onChange={(e) =>
+                          setPointsToRedeem(
+                            Math.max(0, Math.min(maxPoints, parseInt(e.target.value) || 0)),
+                          )
+                        }
+                        className="w-24 px-3 py-2 rounded-lg bg-dark-700 border border-white/10 text-sm text-white text-right focus:outline-none focus:border-brand-400"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPointsToRedeem(0)}
+                          className="px-2 py-1 rounded-md text-white/50 hover:text-white hover:bg-white/5"
+                        >
+                          None
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPointsToRedeem(maxPoints)}
+                          className="px-2 py-1 rounded-md text-brand-300 hover:text-brand-200 hover:bg-brand-500/10"
+                        >
+                          Use max
+                        </button>
+                      </div>
+                      <p className="text-white/40">
+                        {clamped > 0 ? (
+                          <>
+                            <span className="text-emerald-400 font-medium">
+                              -${(clamped / 100).toFixed(2)}
+                            </span>{' '}
+                            applied (100 pts = $1)
+                          </>
+                        ) : (
+                          '100 pts = $1 off'
+                        )}
+                      </p>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          )}
 
           {/* Payment notice */}
           <div className="glass rounded-2xl p-6 space-y-3">
@@ -365,6 +465,22 @@ export default function CheckoutPage() {
                 </p>
               ) : null}
 
+              {/* Loyalty points applied */}
+              {pointsToRedeem > 0 && (
+                <Row
+                  label={
+                    <span className="text-amber-300/90">
+                      Loyalty points ({pointsToRedeem.toLocaleString()})
+                    </span>
+                  }
+                  value={
+                    <span className="text-amber-300/90 tabular-nums">
+                      −{formatPrice(pointsToRedeem)}
+                    </span>
+                  }
+                />
+              )}
+
               <Row label="Shipping" value="Calculated next" muted />
               <Row label="Tax" value="Calculated next" muted />
             </div>
@@ -375,7 +491,7 @@ export default function CheckoutPage() {
               label={<span className="font-semibold">Estimated total</span>}
               value={
                 <span className="font-semibold tabular-nums">
-                  {formatPrice(finalTotal)}+
+                  {formatPrice(Math.max(0, finalTotal - pointsToRedeem))}+
                 </span>
               }
             />

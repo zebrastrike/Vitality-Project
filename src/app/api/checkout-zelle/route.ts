@@ -38,6 +38,9 @@ const zelleCheckoutSchema = z.object({
     country: z.string().default('US'),
   }),
   discountCode: z.string().optional(),
+  // Optional loyalty redemption — points to spend on this order. Server
+  // validates against the user's current balance before applying.
+  loyaltyPointsToRedeem: z.number().int().min(0).optional(),
 })
 
 async function getZelleConfig(): Promise<{
@@ -164,18 +167,48 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Loyalty redemption — validate balance and convert to discount cents.
+    // 1 point = 1 cent. The redemption is applied AFTER discount-code discount
+    // but BEFORE shipping/tax so points reduce the taxable base too. The
+    // actual ledger mutation happens after the Order row is created so we
+    // can pass orderId into redeemPointsForOrder.
+    let loyaltyPointsToUse = 0
+    let loyaltyDiscount = 0
+    if (
+      data.loyaltyPointsToRedeem &&
+      data.loyaltyPointsToRedeem > 0 &&
+      !locationId // never redeem on B2B tenant orders
+    ) {
+      const account = await prisma.loyaltyAccount.findUnique({
+        where: { userId: session.user.id },
+        select: { points: true },
+      })
+      const available = account?.points ?? 0
+      // Cap to the remaining subtotal after discount-code so the order
+      // never goes negative on the cart total.
+      const remainingAfterDiscount = Math.max(0, subtotal - discount)
+      loyaltyPointsToUse = Math.max(
+        0,
+        Math.min(data.loyaltyPointsToRedeem, available, remainingAfterDiscount),
+      )
+      loyaltyDiscount = loyaltyPointsToUse // 1pt = 1c
+    }
+
     const { rate: shippingCost } = await calculateShipping(
       subtotal,
       data.shippingAddress.country,
       data.shippingAddress.state,
     )
-    const taxableBase = Math.max(0, subtotal - discount)
+    const taxableBase = Math.max(0, subtotal - discount - loyaltyDiscount)
     const taxAmount = await calculateTaxAsync(
       taxableBase,
       data.shippingAddress.state,
       { organizationId },
     )
-    const total = Math.max(0, subtotal - discount + shippingCost + taxAmount)
+    const total = Math.max(
+      0,
+      subtotal - discount - loyaltyDiscount + shippingCost + taxAmount,
+    )
 
     const orderNumber = generateOrderNumber()
 
@@ -240,6 +273,7 @@ export async function POST(req: NextRequest) {
         shippingAddressId: shippingAddress?.id,
         affiliateId: resolvedAffiliateId,
         affiliateCode: resolvedAffiliateCode,
+        loyaltyPointsUsed: loyaltyPointsToUse,
         items: { create: orderItems },
       },
     })
@@ -249,6 +283,23 @@ export async function POST(req: NextRequest) {
         where: { id: appliedDiscountCodeId },
         data: { usedCount: { increment: 1 } },
       })
+    }
+
+    // Burn the loyalty points now that the order row exists — passes orderId
+    // for the ledger transaction. If this fails the order still stands but
+    // the points won't be debited; admin can reconcile manually. Wrapping
+    // in a transaction across order.create above would be ideal long-term.
+    if (loyaltyPointsToUse > 0) {
+      try {
+        const { redeemPointsForOrder } = await import('@/lib/loyalty')
+        await redeemPointsForOrder({
+          userId: session.user.id,
+          pointsToRedeem: loyaltyPointsToUse,
+          orderId: order.id,
+        })
+      } catch (err) {
+        console.error('[checkout-zelle] loyalty redemption failed:', err)
+      }
     }
 
     // Clear server-side cart_items for this user so the abandoned-cart cron
