@@ -1424,8 +1424,50 @@ export function zelleOrderAdminAlert(args: {
   customerEmail: string
   total: number
   itemCount: number
+  items?: OrderItemLine[]
+  shippingAddress?: ShippingAddressShape | null
 }) {
-  const { orderNumber, orderId, customerName, customerEmail, total, itemCount } = args
+  const {
+    orderNumber,
+    orderId,
+    customerName,
+    customerEmail,
+    total,
+    itemCount,
+    items,
+    shippingAddress,
+  } = args
+
+  const itemsBlock = items?.length
+    ? box(`
+        <p style="margin:0 0 8px;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;">Items</p>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          ${items
+            .map(
+              (it) => `<tr>
+              <td style="padding:4px 0;color:#e5e7eb;font-size:13px;">
+                ${escapeHtml(it.name)} <span style="color:#6b7280;">× ${it.quantity}</span>
+              </td>
+              <td align="right" style="padding:4px 0;color:#ffffff;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${formatMoney(it.total ?? it.price * it.quantity)}</td>
+            </tr>`,
+            )
+            .join('')}
+        </table>
+      `)
+    : ''
+
+  const addressBlock = shippingAddress
+    ? box(`
+        <p style="margin:0 0 8px;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;">Ship to (manual fulfillment)</p>
+        <p style="margin:0;color:#e5e7eb;font-size:13px;line-height:1.5;">
+          ${escapeHtml(shippingAddress.name)}<br/>
+          ${escapeHtml(shippingAddress.line1)}<br/>
+          ${shippingAddress.line2 ? escapeHtml(shippingAddress.line2) + '<br/>' : ''}
+          ${escapeHtml(shippingAddress.city)}, ${escapeHtml(shippingAddress.state)} ${escapeHtml(shippingAddress.zip)}<br/>
+          ${escapeHtml(shippingAddress.country ?? 'US')}
+        </p>
+      `)
+    : ''
 
   const body = `
     ${h1(`New Zelle order — payment pending`)}
@@ -1455,6 +1497,9 @@ export function zelleOrderAdminAlert(args: {
         </tr>
       </table>
     `)}
+
+    ${itemsBlock}
+    ${addressBlock}
 
     ${button('Open order in admin', `${APP_URL}/admin/orders/${orderId}`)}
 

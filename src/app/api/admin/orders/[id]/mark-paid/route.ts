@@ -89,12 +89,26 @@ export async function POST(
       orderNumber: true,
       email: true,
       total: true,
+      subtotal: true,
+      shipping: true,
+      tax: true,
       paymentMethod: true,
       paymentStatus: true,
       status: true,
       notes: true,
       affiliateId: true,
-      shippingAddress: { select: { name: true } },
+      items: { select: { name: true, sku: true, quantity: true, price: true, total: true } },
+      shippingAddress: {
+        select: {
+          name: true,
+          line1: true,
+          line2: true,
+          city: true,
+          state: true,
+          zip: true,
+          country: true,
+        },
+      },
       user: { select: { name: true } },
     },
   })
@@ -194,6 +208,90 @@ export async function POST(
       console.error('[mark-paid] payment-confirmed email failed:', err)
     }
   })()
+
+  // Admin "go ship this" email — only for physical orders (not memberships).
+  // Manual fulfillment phase: this is the trigger telling the owner the
+  // money's in hand and the package can go out the door.
+  if (!order.notes?.startsWith(MEMBERSHIP_NOTE_PREFIX)) {
+    void (async () => {
+      try {
+        const adminEmail = process.env.ADMIN_EMAIL
+        if (!adminEmail || !order.shippingAddress) return
+        const itemsList = order.items
+          .map(
+            (it) =>
+              `  • ${it.name}${it.sku ? ` [${it.sku}]` : ''} × ${it.quantity}  ($${(it.total / 100).toFixed(2)})`,
+          )
+          .join('\n')
+        const a = order.shippingAddress
+        const address = [
+          a.name,
+          a.line1,
+          a.line2,
+          `${a.city}, ${a.state} ${a.zip}`,
+          a.country ?? 'US',
+        ]
+          .filter(Boolean)
+          .join('\n')
+        const text = `Order #${order.orderNumber} is PAID — ready to ship.
+
+Items:
+${itemsList}
+
+Subtotal: $${(order.subtotal / 100).toFixed(2)}
+Shipping: $${(order.shipping / 100).toFixed(2)}
+Tax:      $${(order.tax / 100).toFixed(2)}
+Total:    $${(order.total / 100).toFixed(2)}
+
+Ship to:
+${address}
+
+Customer email: ${order.email}
+
+Open in admin: ${process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'}/admin/orders/${order.id}`
+        const itemsHtml = order.items
+          .map(
+            (it) =>
+              `<tr><td style="padding:4px 8px 4px 0;color:#e5e7eb;font-size:13px;">${it.name}${it.sku ? ` <code style="color:#888;font-size:11px;">[${it.sku}]</code>` : ''} × ${it.quantity}</td><td align="right" style="padding:4px 0;color:#fff;font-family:ui-monospace;font-size:13px;">$${(it.total / 100).toFixed(2)}</td></tr>`,
+          )
+          .join('')
+        const html = `<!doctype html><html><body style="margin:0;background:#0c0e1a;color:#cbd5e1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:32px 16px;">
+<div style="max-width:600px;margin:0 auto;background:rgba(20,24,42,0.7);border:1px solid rgba(16,185,129,0.4);border-radius:14px;padding:24px 28px;">
+  <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#34d399;margin-bottom:6px;">Ready to ship — payment confirmed</div>
+  <h1 style="margin:0 0 14px;font-size:22px;color:#fff;">Order #${order.orderNumber}</h1>
+  <div style="background:#0c0e1a;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;margin:0 0 14px;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.08em;color:#9ca3af;text-transform:uppercase;">Items</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">${itemsHtml}</table>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;border-top:1px dashed rgba(255,255,255,0.1);padding-top:10px;">
+      <tr><td style="font-size:13px;color:#9ca3af;">Subtotal</td><td align="right" style="font-size:13px;color:#e5e7eb;font-family:ui-monospace;">$${(order.subtotal / 100).toFixed(2)}</td></tr>
+      <tr><td style="font-size:13px;color:#9ca3af;">Shipping</td><td align="right" style="font-size:13px;color:#e5e7eb;font-family:ui-monospace;">$${(order.shipping / 100).toFixed(2)}</td></tr>
+      <tr><td style="font-size:13px;color:#9ca3af;">Tax</td><td align="right" style="font-size:13px;color:#e5e7eb;font-family:ui-monospace;">$${(order.tax / 100).toFixed(2)}</td></tr>
+      <tr><td style="padding-top:6px;font-size:14px;color:#fff;font-weight:700;">Total paid</td><td align="right" style="padding-top:6px;font-size:16px;color:#fff;font-weight:700;font-family:ui-monospace;">$${(order.total / 100).toFixed(2)}</td></tr>
+    </table>
+  </div>
+  <div style="background:#0c0e1a;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;margin:0 0 14px;">
+    <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.08em;color:#9ca3af;text-transform:uppercase;">Ship to</p>
+    <p style="margin:0;font-size:13px;color:#e5e7eb;line-height:1.5;">
+      ${a.name}<br/>${a.line1}<br/>${a.line2 ? a.line2 + '<br/>' : ''}${a.city}, ${a.state} ${a.zip}<br/>${a.country ?? 'US'}
+    </p>
+    <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;">Customer email: ${order.email}</p>
+  </div>
+  <div style="text-align:center;margin:18px 0;">
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://vitalityproject.global'}/admin/orders/${order.id}" style="display:inline-block;background:#10b981;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:9px;">Open order in admin</a>
+  </div>
+  <p style="margin:0;font-size:12px;color:#94a3b8;">Manual-fulfillment phase: paste the address above into your label tool and ship.</p>
+</div></body></html>`
+        await sendEmail({
+          to: adminEmail,
+          subject: `[ship] #${order.orderNumber} paid — $${(order.total / 100).toFixed(2)} — ${order.shippingAddress.city}, ${order.shippingAddress.state}`,
+          html,
+          text,
+        })
+      } catch (err) {
+        console.error('[mark-paid] admin ship-alert email failed:', err)
+      }
+    })()
+  }
 
   return NextResponse.json({
     ok: true,

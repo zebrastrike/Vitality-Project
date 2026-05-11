@@ -292,6 +292,13 @@ export async function POST(req: NextRequest) {
             customerEmail: data.email,
             total,
             itemCount: orderItems.length,
+            items: orderItems.map((it) => ({
+              name: it.name,
+              quantity: it.quantity,
+              price: it.price,
+              total: it.total,
+            })),
+            shippingAddress: data.shippingAddress,
           })
           await sendEmail({
             to: adminEmail,
