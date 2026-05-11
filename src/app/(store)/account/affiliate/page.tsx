@@ -15,6 +15,7 @@ import {
   Copy,
 } from 'lucide-react'
 import { AffiliateCopyLink } from './copy-link'
+import { RequestPayoutButton } from './request-payout-button'
 
 const commissionStatusVariant: Record<
   string,
@@ -125,6 +126,8 @@ export default async function AffiliatePage() {
 
   const pendingEarnings =
     commissionAgg.find((c) => c.status === 'PENDING')?._sum.amount ?? 0
+  const approvedEarnings =
+    commissionAgg.find((c) => c.status === 'APPROVED')?._sum.amount ?? 0
   const paidEarnings =
     commissionAgg.find((c) => c.status === 'PAID')?._sum.amount ?? 0
   const totalOrders = commissionAgg.reduce((sum, c) => sum + (c._count ?? 0), 0)
@@ -146,6 +149,22 @@ export default async function AffiliatePage() {
         <p className="text-xs text-white/30 mt-2">
           Commission rate: {(affiliate.commissionRate * 100).toFixed(0)}% per sale
         </p>
+      </div>
+
+      {/* Payout request */}
+      <div className="glass rounded-2xl p-5 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Approved balance</p>
+            <p className="text-2xl font-bold text-emerald-400 mt-0.5">{formatPrice(approvedEarnings)}</p>
+            <p className="text-xs text-white/30 mt-1">
+              {pendingEarnings > 0
+                ? `${formatPrice(pendingEarnings)} still pending admin review`
+                : 'All your commissions are approved or paid'}
+            </p>
+          </div>
+          <RequestPayoutButton approvedBalanceCents={approvedEarnings} />
+        </div>
       </div>
 
       {/* Stats cards */}
