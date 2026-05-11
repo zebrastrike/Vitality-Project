@@ -33,24 +33,46 @@ async function checkDb(): Promise<Component> {
 async function checkRedis(): Promise<Component> {
   const url = process.env.REDIS_URL
   if (!url) return { status: 'skipped', detail: 'REDIS_URL not set' }
+  // Use the Upstash Redis REST API if it's a https:// URL, otherwise just a
+  // raw TCP ping so we don't pull a Redis client into the bundle.
+  if (!url.startsWith('redis://') && !url.startsWith('rediss://')) {
+    return { status: 'skipped', detail: 'Non-TCP REDIS_URL not probed here' }
+  }
   const t0 = Date.now()
   try {
-    // Lazy import so this file works in environments without ioredis.
-    const { Redis } = await import('ioredis').catch(() => ({ Redis: null as any }))
-    if (!Redis) return { status: 'skipped', detail: 'ioredis not installed' }
-    const r = new Redis(url, {
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-      connectTimeout: 2500,
+    const parsed = new URL(url.replace(/^rediss?:\/\//, 'http://'))
+    const host = parsed.hostname
+    const port = parsed.port ? parseInt(parsed.port) : 6379
+    // Open a raw socket + send PING (resp protocol) so we don't need an
+    // npm package that complicates the TypeScript build. node:net is
+    // bundled with Node.
+    const net = await import('node:net')
+    return await new Promise<Component>((resolve) => {
+      const sock = net.createConnection({ host, port, timeout: 2500 })
+      let buf = ''
+      const cleanup = (out: Component) => {
+        sock.removeAllListeners()
+        sock.destroy()
+        resolve(out)
+      }
+      sock.once('connect', () => sock.write('*1\r\n$4\r\nPING\r\n'))
+      sock.on('data', (chunk) => {
+        buf += chunk.toString('utf8')
+        if (buf.includes('+PONG')) {
+          cleanup({ status: 'ok', latencyMs: Date.now() - t0, detail: 'PONG' })
+        }
+      })
+      sock.once('timeout', () =>
+        cleanup({ status: 'down', latencyMs: Date.now() - t0, detail: 'timeout' }),
+      )
+      sock.once('error', (err) =>
+        cleanup({
+          status: 'down',
+          latencyMs: Date.now() - t0,
+          detail: err.message,
+        }),
+      )
     })
-    await r.connect()
-    const pong = await r.ping()
-    await r.quit()
-    return {
-      status: pong === 'PONG' ? 'ok' : 'down',
-      latencyMs: Date.now() - t0,
-      detail: pong,
-    }
   } catch (err) {
     return {
       status: 'down',
