@@ -87,17 +87,20 @@ async function checkResend(): Promise<Component> {
   if (!key) return { status: 'skipped', detail: 'RESEND_API_KEY not set' }
   const t0 = Date.now()
   try {
-    // Cheap auth probe — GET /domains returns 200 with a valid key.
+    // Reachability probe. A sending-scope token returns 401 on /domains,
+    // but the network path + DNS are fine, so a fast HTTP response from
+    // api.resend.com counts as "Resend is reachable from this host". We
+    // only mark it down on network failure / timeout. Actual email-send
+    // failures surface in the application logs ([EMAIL FAIL]).
     const res = await fetch('https://api.resend.com/domains', {
       method: 'GET',
       headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(3500),
     })
-    if (res.ok) return { status: 'ok', latencyMs: Date.now() - t0 }
     return {
-      status: 'down',
+      status: 'ok',
       latencyMs: Date.now() - t0,
-      detail: `HTTP ${res.status}`,
+      detail: res.ok ? 'auth+reachable' : `reachable (HTTP ${res.status})`,
     }
   } catch (err) {
     return {
@@ -115,19 +118,20 @@ export async function GET() {
     checkResend(),
   ])
 
-  // Down state if any non-skipped component is failing. Skipped (unconfigured)
-  // components don't count against the overall health — they just say "n/a".
-  const required: Component[] = [db, redis, resend].filter((c) => c.status !== 'skipped')
-  const allOk = required.every((c) => c.status === 'ok')
+  // Only DB-down trips the hard 503 (the workflow smoke check fails the
+  // deploy on non-2xx). Resend or Redis individually down -> 200 with
+  // "degraded" so admin sees it without blocking the deploy.
+  const allOk = db.status === 'ok' && redis.status !== 'down' && resend.status !== 'down'
+  const dbDown = db.status === 'down'
 
   return NextResponse.json(
     {
-      status: allOk ? 'ok' : 'degraded',
+      status: dbDown ? 'down' : allOk ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
       components: { db, redis, resend },
     },
     {
-      status: allOk ? 200 : 503,
+      status: dbDown ? 503 : 200,
       headers: { 'Cache-Control': 'no-store' },
     },
   )
