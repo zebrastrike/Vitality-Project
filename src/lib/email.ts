@@ -6,6 +6,28 @@ const FROM =
   'The Vitality Project <noreply@vitalityproject.global>'
 const REPLY_TO = process.env.EMAIL_REPLY_TO || 'support@vitalityproject.global'
 
+// Synthetic test recipients from local E2E scripts and audits. These addresses
+// at @vitalityproject.global don't have real mailboxes, so every send bounces
+// and Resend adds the address to its suppression list — which hurts the
+// domain's sender reputation. Block them centrally so no future codepath
+// (cron, mark-paid, register, anything) can leak real Resend sends to them.
+//
+// Patterns deliberately prefix-anchored (^foo\+) so legitimate customer
+// emails like "test.user@gmail.com" don't get caught.
+const INTERNAL_RECIPIENT_PATTERNS = [
+  /^test\+/i,
+  /^audit\+/i,
+  /^afftest\+/i,
+  /^checkall\+/i,
+  /^shiptest\+/i,
+  /^markpaid\+/i,
+  /^fixtest\+/i,
+  /^smoke\+/i,
+]
+function isInternalRecipient(to: string): boolean {
+  return INTERNAL_RECIPIENT_PATTERNS.some((re) => re.test(to))
+}
+
 // Lazy singleton — Resend's constructor throws if the key is missing, so we
 // defer instantiation until first use. This keeps the build green in
 // environments (CI, local dev) where RESEND_API_KEY isn't configured.
@@ -35,6 +57,13 @@ export async function sendEmail({
   text,
   tags,
 }: SendEmailArgs): Promise<SendEmailResult> {
+  // Synthetic test recipients: never actually call Resend — every send would
+  // bounce and add the address to the suppression list, damaging the domain
+  // reputation for real customer sends.
+  if (isInternalRecipient(to)) {
+    console.log(`[EMAIL SKIPPED test-recipient] to=${to} subject="${subject}"`)
+    return { success: true, id: 'skipped-test' }
+  }
   const resend = getResend()
   if (!resend) {
     // Dev / unconfigured — log instead of sending so the app never errors out
